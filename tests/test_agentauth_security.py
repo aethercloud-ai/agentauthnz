@@ -226,6 +226,85 @@ class TestInputSanitizer(unittest.TestCase):
         }
         result = self.sanitizer.sanitize_jwk(jwk)
         self.assertNotIn("<script>", result["kid"])
+    
+    def test_contains_suspicious_patterns(self):
+        """Test detection of suspicious patterns in tokens."""
+        # Test with safe token
+        safe_token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        result = self.sanitizer._contains_suspicious_patterns(safe_token)
+        self.assertFalse(result)
+        
+        # Test with suspicious patterns
+        suspicious_tokens = [
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.<script>alert('xss')</script>.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.javascript:alert('xss').SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.data:text/html,<script>alert('xss')</script>.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.../../../etc/passwd.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eval('alert(1)').SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        ]
+        
+        for token in suspicious_tokens:
+            result = self.sanitizer._contains_suspicious_patterns(token)
+            self.assertTrue(result, f"Failed to detect suspicious pattern in: {token}")
+    
+    def test_is_ssrf_vulnerable(self):
+        """Test SSRF vulnerability detection in URLs."""
+        # Test safe URLs
+        safe_urls = [
+            "https://api.example.com/oauth2/token",
+            "https://auth.google.com/.well-known/openid_configuration",
+            "https://login.microsoftonline.com/common/v2.0/.well-known/openid_configuration"
+        ]
+        
+        for url in safe_urls:
+            result = self.sanitizer._is_ssrf_vulnerable(url)
+            self.assertFalse(result, f"Safe URL incorrectly flagged as SSRF vulnerable: {url}")
+        
+        # Test SSRF vulnerable URLs
+        vulnerable_urls = [
+            "https://localhost/oauth2/token",
+            "https://127.0.0.1/.well-known/openid_configuration",
+            "https://0.0.0.0/oauth2/token",
+            "https://169.254.169.254/latest/meta-data/",
+            "https://169.254.170.2/$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+            "https://10.0.0.1/oauth2/token",
+            "https://172.16.0.1/.well-known/openid_configuration",
+            "https://192.168.1.1/oauth2/token",
+            "https://malicious.com.localhost/oauth2/token",
+            "https://evil.com.127.0.0.1/oauth2/token"
+        ]
+        
+        for url in vulnerable_urls:
+            result = self.sanitizer._is_ssrf_vulnerable(url)
+            self.assertTrue(result, f"SSRF vulnerable URL not detected: {url}")
+    
+    def test_is_private_ip(self):
+        """Test private IP address detection."""
+        # Test public IPs
+        public_ips = [
+            "8.8.8.8",
+            "1.1.1.1",
+            "208.67.222.222",
+            "142.250.190.78"
+        ]
+        
+        for ip in public_ips:
+            result = self.sanitizer._is_private_ip(ip)
+            self.assertFalse(result, f"Public IP incorrectly flagged as private: {ip}")
+        
+        # Test private IPs
+        private_ips = [
+            "10.0.0.1",
+            "10.255.255.255",
+            "172.16.0.1",
+            "172.31.255.255",
+            "192.168.0.1",
+            "192.168.255.255"
+        ]
+        
+        for ip in private_ips:
+            result = self.sanitizer._is_private_ip(ip)
+            self.assertTrue(result, f"Private IP not detected: {ip}")
 
 
 class TestResourceLimiter(unittest.TestCase):
@@ -737,6 +816,87 @@ class TestSecurityUtilityFunctions(unittest.TestCase):
         
         result = validate_cryptographic_parameters(jwk)
         self.assertFalse(result)
+    
+    def test_is_safe_crypto_value(self):
+        """Test the _is_safe_crypto_value utility function."""
+        from agentauth.utils.crypto import _is_safe_crypto_value
+        
+        # Test safe string values
+        safe_strings = [
+            "RS256",
+            "ES256", 
+            "test-key-id",
+            "AQAB",
+            "test-n-value",
+            "P-256"
+        ]
+        
+        for value in safe_strings:
+            result = _is_safe_crypto_value(value)
+            self.assertTrue(result, f"Safe string incorrectly flagged as unsafe: {value}")
+        
+        # Test dangerous string values
+        dangerous_strings = [
+            "<script>alert('xss')</script>",
+            "javascript:alert('xss')",
+            "data:text/html,<script>alert('xss')</script>",
+            "vbscript:alert('xss')",
+            "eval('alert(1)')",
+            "exec('rm -rf /')",
+            "compile('print(1)')",
+            "__import__('os').system('ls')",
+            "os.system('rm -rf /')",
+            "sys.exit(1)",
+            "subprocess.call(['rm', '-rf', '/'])",
+            "import os",
+            "from os import system",
+            "globals()",
+            "locals()"
+        ]
+        
+        for value in dangerous_strings:
+            result = _is_safe_crypto_value(value)
+            self.assertFalse(result, f"Dangerous string not detected: {value}")
+        
+        # Test safe non-string values
+        safe_values = [
+            123,
+            3.14,
+            True,
+            False,
+            {"kty": "RSA", "alg": "RS256"},
+            ["RSA", "RS256"]
+        ]
+        
+        for value in safe_values:
+            result = _is_safe_crypto_value(value)
+            self.assertTrue(result, f"Safe non-string value incorrectly flagged as unsafe: {value}")
+        
+        # Test None value (should be unsafe)
+        result = _is_safe_crypto_value(None)
+        self.assertFalse(result, "None value should be flagged as unsafe")
+        
+        # Test nested structures
+        safe_nested = {
+            "keys": [
+                {"kty": "RSA", "alg": "RS256"},
+                {"kty": "EC", "alg": "ES256"}
+            ]
+        }
+        
+        result = _is_safe_crypto_value(safe_nested)
+        self.assertTrue(result, "Safe nested structure incorrectly flagged as unsafe")
+        
+        # Test nested structures with dangerous content
+        dangerous_nested = {
+            "keys": [
+                {"kty": "RSA", "alg": "RS256"},
+                {"kty": "EC", "alg": "<script>alert('xss')</script>"}
+            ]
+        }
+        
+        result = _is_safe_crypto_value(dangerous_nested)
+        self.assertFalse(result, "Dangerous nested structure not detected")
 
 
 class TestEnvironmentVariables(unittest.TestCase):
