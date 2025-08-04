@@ -41,9 +41,29 @@ class SecureErrorHandler:
             'injection_attempt': 'Malicious input detected'
         }
     
-    def handle_error(self, error: Exception, context: str = None) -> Dict[str, Any]:
+    def handle_error(self, error: Exception, context: str = None) -> str:
         """
         Security. Handle errors securely without information disclosure.
+        
+        Args:
+            error: Exception to handle
+            context: Additional context for logging
+            
+        Returns:
+            Error ID string for tracking
+        """
+        # Security. Generate unique error ID for tracking
+        error_id = self._generate_error_id()
+        
+        # Security. Log full error details internally for debugging
+        self._log_error_details(error, context, error_id)
+        
+        # Security. Return only the error ID to prevent information disclosure
+        return error_id
+    
+    def get_error_details(self, error: Exception, context: str = None) -> Dict[str, Any]:
+        """
+        Security. Get detailed error information for internal use.
         
         Args:
             error: Exception to handle

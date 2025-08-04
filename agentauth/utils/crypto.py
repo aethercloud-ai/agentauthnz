@@ -86,6 +86,29 @@ def validate_cryptographic_parameters(jwk: Dict) -> bool:
                 logger.warning(f"Unsupported algorithm: {alg}")
                 return False
         
+        # Validate key sizes for RSA keys
+        if kty == 'RSA':
+            n_value = jwk.get('n')
+            if n_value:
+                try:
+                    import base64
+                    # Decode base64url to get key size
+                    n_bytes = base64.urlsafe_b64decode(n_value + '==')
+                    key_size_bits = len(n_bytes) * 8
+                    if key_size_bits < 2048:
+                        logger.warning(f"RSA key size too small: {key_size_bits} bits (minimum 2048)")
+                        return False
+                except Exception as e:
+                    logger.warning(f"Invalid RSA key format: {e}")
+                    return False
+        
+        # Validate key sizes for EC keys
+        elif kty == 'EC':
+            crv = jwk.get('crv')
+            if crv and crv not in ['P-256', 'P-384', 'P-521']:
+                logger.warning(f"Unsupported EC curve: {crv}")
+                return False
+        
         # Validate field types and content
         for key, value in jwk.items():
             if not _is_safe_crypto_value(value):

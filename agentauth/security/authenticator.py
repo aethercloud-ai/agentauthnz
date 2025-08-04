@@ -103,7 +103,7 @@ class CryptographicAuthenticator:
         h = hmac.new(self._secret_key, message.encode(), hashlib.sha256)
         signature = base64.urlsafe_b64encode(h.digest()).decode()
         
-        return f"{signature}:{timestamp}"
+        return f"{timestamp}:{signature}"
     
     def verify_hmac_token(self, token: str, data: str, max_age: int = 300) -> bool:
         """
@@ -123,7 +123,7 @@ class CryptographicAuthenticator:
             if len(parts) != 2:
                 return False
             
-            signature, timestamp_str = parts
+            timestamp_str, signature = parts
             timestamp = int(timestamp_str)
             
             # Check age
@@ -210,7 +210,7 @@ class SecureTokenValidator:
     
     def __init__(self):
         """Initialize secure token validator."""
-        pass
+        self._authenticator = CryptographicAuthenticator()
     
     def validate_token_secure(
         self,
