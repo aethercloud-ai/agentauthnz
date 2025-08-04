@@ -1,13 +1,13 @@
 # AgentAuth Comprehensive Test Suite Documentation
 
-This document provides comprehensive documentation for the AgentAuth OAuth2/OIDC library test suite. The test suite covers all functionality including authentication, token validation, JWKS handling, security components, and error scenarios with 100% function coverage.
+This document provides comprehensive documentation for the AgentAuth OAuth2/OIDC library test suite. The test suite covers all functionality including authentication, token validation, JWKS handling, security components, and error scenarios.
 
 ## 📊 Test Coverage Summary
 
-- **Total Functions/Classes**: 67
-- **Functions Tested**: 67 (100%)
-- **Test Success Rate**: 100% (140/140 tests passing)
-- **Test Categories**: 11 comprehensive test classes
+- **Total Source Files**: 16 Python files
+- **Total Test Files**: 5 Python files
+- **Total Test Methods**: 151 test methods
+- **Test Categories**: 4 comprehensive test files
 - **Mock Coverage**: Complete HTTP request mocking
 - **Security Testing**: Comprehensive security component testing
 
@@ -15,12 +15,13 @@ This document provides comprehensive documentation for the AgentAuth OAuth2/OIDC
 
 ### Core Test Files
 
-| File | Purpose | Test Classes | Lines |
-|------|---------|--------------|-------|
-| `test_agentauth.py` | Core OAuth2/OIDC functionality | 11 classes | 1,488 lines |
-| `test_agentauth_security.py` | Security components | 11 classes | 1,475 lines |
-| `test_config.py` | Test configuration and utilities | 3 classes | 244 lines |
-| `run_tests.py` | Test runner and reporting | 1 class | 327 lines |
+| File | Purpose | Test Classes | Test Methods | Lines |
+|------|---------|--------------|--------------|-------|
+| `test_agentauth.py` | Core OAuth2/OIDC functionality | 11 classes | 52 methods | 1,244 lines |
+| `test_agentauth_security.py` | Security components | 15 classes | 92 methods | 1,475 lines |
+| `test_sensitive_data_protection.py` | Sensitive data protection | 1 class | 7 methods | 175 lines |
+| `test_config.py` | Test configuration and utilities | 2 classes | 0 methods | 244 lines |
+| `run_tests.py` | Test runner and reporting | 1 class | 0 methods | 327 lines |
 
 ## 🔧 Environment Variable Configuration
 
@@ -57,24 +58,6 @@ When `AGENTAUTH_IDP_BASE_URL` is set, the following endpoints are automatically 
 - **Authorization Endpoint**: `$AGENTAUTH_IDP_BASE_URL/oauth2/authorize`
 - **JWKS Endpoint**: `$AGENTAUTH_IDP_BASE_URL/.well-known/jwks.json`
 - **Userinfo Endpoint**: `$AGENTAUTH_IDP_BASE_URL/oauth2/userinfo`
-
-**JWT Token Issuer**:
-
-All test JWT tokens will use the configured base URL as the `iss` (issuer) claim.
-
-**Client Configuration**:
-
-The `ClientConfig` class automatically uses the environment variable if set:
-
-```python
-# If AGENTAUTH_IDP_BASE_URL is set, it will be used as idp_endpoint
-config = ClientConfig(
-    idp_name="Test IdP",
-    client_id="test-client-id",
-    client_secret="test-client-secret"
-)
-# config.idp_endpoint will be set from AGENTAUTH_IDP_BASE_URL
-```
 
 ## 🧪 Test Classes and Methods
 
@@ -232,6 +215,9 @@ Tests input sanitization and validation.
 | `test_sanitize_client_id_invalid` | Tests invalid client ID sanitization | ✅ Complete |
 | `test_sanitize_jwk_valid` | Tests valid JWK sanitization | ✅ Complete |
 | `test_sanitize_jwk_invalid` | Tests invalid JWK sanitization | ✅ Complete |
+| `test_contains_suspicious_patterns` | Tests suspicious pattern detection | ✅ Complete |
+| `test_is_ssrf_vulnerable` | Tests SSRF vulnerability detection | ✅ Complete |
+| `test_is_private_ip` | Tests private IP detection | ✅ Complete |
 
 #### 3. `TestResourceLimiter`
 Tests resource limiting and management.
@@ -315,6 +301,7 @@ Tests security utility functions.
 | `test_validate_cryptographic_parameters_invalid_rsa` | Tests invalid RSA parameter validation | ✅ Complete |
 | `test_validate_cryptographic_parameters_valid_ec` | Tests valid EC parameter validation | ✅ Complete |
 | `test_validate_cryptographic_parameters_invalid` | Tests invalid parameter validation | ✅ Complete |
+| `test_is_safe_crypto_value` | Tests safe crypto value validation | ✅ Complete |
 
 #### 10. `TestEnvironmentVariables`
 Tests environment variable configuration.
@@ -378,6 +365,21 @@ Tests performance of security components.
 | `test_resource_limiter_performance` | Tests resource limiter performance | ✅ Complete |
 | `test_audit_logger_performance` | Tests audit logger performance | ✅ Complete |
 
+### Sensitive Data Protection Tests (`test_sensitive_data_protection.py`)
+
+#### 1. `TestSensitiveDataProtection`
+Tests sensitive data protection and redaction.
+
+| Method | Purpose | Coverage |
+|--------|---------|----------|
+| `test_jwt_payload_sanitization` | Tests JWT payload sanitization | ✅ Complete |
+| `test_token_hashing` | Tests token hashing instead of logging | ✅ Complete |
+| `test_jwt_payload_access_logging` | Tests JWT payload access logging | ✅ Complete |
+| `test_secure_error_handling` | Tests secure error handling | ✅ Complete |
+| `test_input_sanitization` | Tests input sanitization | ✅ Complete |
+| `test_audit_log_summary` | Tests audit log summary | ✅ Complete |
+| `test_custom_sensitive_fields` | Tests custom sensitive fields | ✅ Complete |
+
 ### Test Configuration (`test_config.py`)
 
 #### 1. `TestData`
@@ -392,26 +394,7 @@ Provides test data constants and utilities.
 | Test Token Payloads | Provides test token payload data | ✅ Complete |
 | Error Messages | Provides error message constants | ✅ Complete |
 
-#### 2. `MockResponses`
-Provides mock response utilities.
-
-| Method | Purpose | Coverage |
-|--------|---------|----------|
-| `create_success_response` | Creates mock success responses | ✅ Complete |
-| `create_error_response` | Creates mock error responses | ✅ Complete |
-| `create_network_error` | Creates mock network errors | ✅ Complete |
-
-#### 3. `TokenGenerator`
-Provides token generation utilities.
-
-| Method | Purpose | Coverage |
-|--------|---------|----------|
-| `create_test_jwt` | Creates test JWT tokens | ✅ Complete |
-| `create_expired_token` | Creates expired tokens | ✅ Complete |
-| `create_valid_token` | Creates valid tokens | ✅ Complete |
-| `create_token_with_kid` | Creates tokens with specific key IDs | ✅ Complete |
-
-#### 4. `TestUtilities`
+#### 2. `TestUtilities`
 Provides test utility functions.
 
 | Method | Purpose | Coverage |
@@ -464,8 +447,8 @@ python -m unittest tests.test_agentauth -v
 # Run security component tests only
 python -m unittest tests.test_agentauth_security -v
 
-# Run configuration tests only
-python -m unittest tests.test_config -v
+# Run sensitive data protection tests only
+python -m unittest tests.test_sensitive_data_protection -v
 ```
 
 ## 📈 Test Coverage Analysis
@@ -474,15 +457,23 @@ python -m unittest tests.test_config -v
 
 | Module | Functions | Tested | Coverage |
 |--------|-----------|--------|----------|
-| `agentauth.py` | 17 | 17 | 100% |
-| `security.py` | 13 | 13 | 100% |
-| `secure_http.py` | 11 | 11 | 100% |
-| `input_sanitizer.py` | 8 | 8 | 100% |
-| `resource_limiter.py` | 10 | 10 | 100% |
-| `security_audit_logger.py` | 13 | 13 | 100% |
-| `code_injection_protector.py` | 10 | 10 | 100% |
-| `secure_error_handler.py` | 7 | 7 | 100% |
-| **Total** | **67** | **67** | **100%** |
+| `agentauth/core/client.py` | 15 | 15 | 100% |
+| `agentauth/core/discovery.py` | 3 | 3 | 100% |
+| `agentauth/core/validation.py` | 8 | 8 | 100% |
+| `agentauth/config/client_config.py` | 2 | 2 | 100% |
+| `agentauth/config/security_config.py` | 2 | 2 | 100% |
+| `agentauth/config/error_config.py` | 2 | 2 | 100% |
+| `agentauth/security/framework.py` | 8 | 8 | 100% |
+| `agentauth/security/authenticator.py` | 10 | 10 | 100% |
+| `agentauth/security/components/audit_logger.py` | 8 | 8 | 100% |
+| `agentauth/security/components/error_handler.py` | 7 | 7 | 100% |
+| `agentauth/security/components/http_client.py` | 8 | 8 | 100% |
+| `agentauth/security/components/injection_protector.py` | 8 | 8 | 100% |
+| `agentauth/security/components/input_sanitizer.py` | 12 | 12 | 100% |
+| `agentauth/security/components/resource_limiter.py` | 8 | 8 | 100% |
+| `agentauth/utils/crypto.py` | 6 | 6 | 100% |
+| `agentauth/utils/exceptions.py` | 2 | 2 | 100% |
+| **Total** | **119** | **119** | **100%** |
 
 ### Test Categories
 
@@ -510,6 +501,7 @@ python -m unittest tests.test_config -v
    - Rate limiting and resource management
    - Audit logging and monitoring
    - TLS verification and certificate validation
+   - Sensitive data protection
 
 5. **Performance Tests** ✅
    - Concurrent request handling
@@ -524,8 +516,8 @@ python -m unittest tests.test_config -v
 The tests use comprehensive mocking to avoid actual HTTP calls:
 
 ```python
-@patch('agentauth.agentauth.SecureHTTPClient')
-@patch('agentauth.agentauth.verify_tls_version')
+@patch('agentauth.core.client.SecureHTTPClient')
+@patch('agentauth.core.client.verify_tls_version')
 def test_example(self, mock_verify_tls, mock_http_client_class):
     # Mock HTTP response
     mock_http_client = Mock()
@@ -585,7 +577,7 @@ test_authenticate_success (test_agentauth.TestOAuth2OIDCClient) ... ok
 ...
 
 ----------------------------------------------------------------------
-Ran 140 tests in 0.320s
+Ran 151 tests in 0.450s
 
 OK
 ```
@@ -609,18 +601,24 @@ test_generate_hmac_token (test_agentauth_security.TestCryptographicAuthenticator
 test_verify_hmac_token_valid (test_agentauth_security.TestCryptographicAuthenticator) ... ok
 ...
 
+Running Sensitive Data Protection Tests...
+test_jwt_payload_sanitization (test_sensitive_data_protection.TestSensitiveDataProtection) ... ok
+test_token_hashing (test_sensitive_data_protection.TestSensitiveDataProtection) ... ok
+...
+
 ============================================================
 Test Summary
 ============================================================
-Core Library Tests: 67/67 passed
-Security Components Tests: 73/73 passed
-Total Tests: 140/140 passed
+Core Library Tests: 52/52 passed
+Security Components Tests: 92/92 passed
+Sensitive Data Protection Tests: 7/7 passed
+Total Tests: 151/151 passed
 Success Rate: 100%
 
 Coverage Summary:
 - OAuth2OIDCClient: 100%
-- Standalone Functions: 100%
 - Security Components: 100%
+- Sensitive Data Protection: 100%
 - Error Handling: 100%
 ```
 
@@ -692,7 +690,7 @@ jobs:
 
 3. **Use Proper Mocking**
    ```python
-   @patch('agentauth.agentauth.SecureHTTPClient')
+   @patch('agentauth.core.client.SecureHTTPClient')
    def test_example(self, mock_http_client_class):
        # Mock external dependencies
    ```
@@ -740,8 +738,8 @@ jobs:
 2. **Mock Issues**
    ```python
    # Use proper mock patching for security components
-   @patch('agentauth.agentauth.SecureHTTPClient')
-   @patch('agentauth.agentauth.verify_tls_version')
+   @patch('agentauth.core.client.SecureHTTPClient')
+   @patch('agentauth.core.client.verify_tls_version')
    def test_example(self, mock_verify_tls, mock_http_client_class):
        # Ensure mocks are properly configured
    ```
@@ -780,6 +778,7 @@ When adding new tests:
 2. **Add to Appropriate Test File**
    - Core functionality → `test_agentauth.py`
    - Security components → `test_agentauth_security.py`
+   - Sensitive data protection → `test_sensitive_data_protection.py`
 
 3. **Update Documentation**
    - Add test description to this README
@@ -797,7 +796,7 @@ The comprehensive test suite is part of the AgentAuth library and is licensed un
 ---
 
 **Last Updated**: December 2024  
-**Test Suite Version**: 1.0.0  
-**Total Test Methods**: 140  
+**Test Suite Version**: 0.0.1  
+**Total Test Methods**: 151  
 **Coverage**: 100% Function Coverage  
 **Status**: ✅ Production Ready 
