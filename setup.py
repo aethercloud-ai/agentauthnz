@@ -33,17 +33,17 @@ def read_requirements():
 
 setup(
     name="agentauth",
-    version="1.0.0",
-    author="AI Assistant",
-    author_email="ai.assistant@example.com",
+    version="0.0.1",
+    author="AgentAuth Team",
+    author_email="team@agentauth.dev",
     description="OAuth2/OIDC Authentication and JWT Token Validation Library",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    url="https://github.com/your-username/agentauth",
+    url="https://github.com/agentauth/agentauth",
     project_urls={
-        "Bug Tracker": "https://github.com/your-username/agentauth/issues",
-        "Documentation": "https://github.com/your-username/agentauth/docs",
-        "Source Code": "https://github.com/your-username/agentauth",
+        "Bug Tracker": "https://github.com/agentauth/agentauth/issues",
+        "Documentation": "https://github.com/agentauth/agentauth/docs",
+        "Source Code": "https://github.com/agentauth/agentauth",
     },
     packages=find_packages(),
     classifiers=[
@@ -102,9 +102,5 @@ setup(
         "jwks",
         "security",
     ],
-    entry_points={
-        "console_scripts": [
-            "agentauth-test=agentauth.tests.run_tests:main",
-        ],
-    },
+
 ) 

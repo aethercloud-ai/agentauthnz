@@ -21,7 +21,7 @@ A comprehensive Python library for OAuth2 and OpenID Connect (OIDC) authenticati
 ### From Source
 
 ```bash
-git clone https://github.com/your-username/agentauth.git
+git clone https://github.com/agentauth/agentauth.git
 cd agentauth
 pip install -e .
 ```
@@ -29,7 +29,7 @@ pip install -e .
 ### Development Installation
 
 ```bash
-git clone https://github.com/your-username/agentauth.git
+git clone https://github.com/agentauth/agentauth.git
 cd agentauth
 pip install -e ".[dev]"
 ```
@@ -760,7 +760,7 @@ logging.basicConfig(level=logging.INFO)
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/agentauth.git
+git clone https://github.com/agentauth/agentauth.git
 cd agentauth
 
 # Install in development mode
