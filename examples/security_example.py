@@ -13,18 +13,21 @@ This example demonstrates the enhanced security features including:
 import os
 import time
 import logging
+import hashlib
 from datetime import datetime
 
 # Import AgentAuth with security features
 from agentauth import (
     OAuth2OIDCClient,
     CryptographicAuthenticator,
-    SecureTokenValidator,
     SecurityError,
     generate_secure_nonce,
     secure_wipe_memory,
-    validate_cryptographic_parameters
+    validate_cryptographic_parameters,
+    ClientBuilder,
+    SecurityBuilder
 )
+from agentauth.security.authenticator import SecureTokenValidator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -53,7 +56,6 @@ def example_simple_dictionary_storage():
     retrieved_jwks = jwks_cache.get('keys')
     
     # Security. Use hashing instead of truncation to prevent sensitive data exposure
-    import hashlib
     token_hash = hashlib.sha256(sensitive_token.encode()).hexdigest()
     retrieved_token_hash = hashlib.sha256(retrieved_token.encode()).hexdigest() if retrieved_token else None
     
@@ -158,15 +160,22 @@ def example_secure_client_usage():
     """Demonstrate secure client usage."""
     print("\n=== Secure Client Usage Example ===")
     
-    # Initialize client with security enabled
-    client = OAuth2OIDCClient(
-        idp_name="Secure IdP",
-        idp_endpoint="https://secure-idp.example.com",
-        client_id="secure-client-id",
-        client_secret="secure-client-secret",
-        # Security is enabled by default
-        cert_chain="/path/to/certificate-chain.pem"  # Optional
-    )
+    # Initialize client with security enabled using the builder pattern
+    security_config = (SecurityBuilder()
+                      .with_security_enabled(True)
+                      .with_input_limits(max_token_length=8192)
+                      .with_resource_limits(max_response_size=1024*1024)
+                      .build())
+    
+    client_config = (ClientBuilder()
+                    .with_idp("Secure IdP", "https://secure-idp.example.com")
+                    .with_credentials("secure-client-id", "secure-client-secret")
+                    .with_timeout(30)
+                    .with_cert_chain("/path/to/certificate-chain.pem")  # Optional
+                    .with_security(security_config)
+                    .build())
+    
+    client = OAuth2OIDCClient(client_config)
     
     # Generate authentication token
     auth = CryptographicAuthenticator()

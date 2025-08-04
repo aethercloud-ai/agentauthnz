@@ -379,6 +379,10 @@ results = validate_multiple_token_signatures(
 
 See `examples/google_cloud_iam_example.py` for a complete example using Google Cloud IAM.
 
+### Security Features Example
+
+See `examples/security_example.py` for a comprehensive demonstration of AgentAuth's security features including cryptographic authentication, rate limiting, anti-replay protection, and enhanced token validation.
+
 #### Setup for Google Cloud IAM
 
 1. **Create a Google Cloud Project**
