@@ -123,15 +123,23 @@ class TestSensitiveDataProtection(unittest.TestCase):
         
         # Test JWT-specific errors
         expired_error = jwt.ExpiredSignatureError("Token has expired")
-        sanitized = self.error_handler.handle_error(expired_error, "token_validation")
-        self.assertIn("Token has expired", sanitized)
-        self.assertNotIn("jwt.ExpiredSignatureError", sanitized)
+        error_id = self.error_handler.handle_error(expired_error, "token_validation")
+        
+        # Verify error ID is returned (not the actual error message)
+        self.assertIsInstance(error_id, str)
+        self.assertEqual(len(error_id), 16)  # 8 bytes = 16 hex chars
+        self.assertNotIn("Token has expired", error_id)
+        self.assertNotIn("jwt.ExpiredSignatureError", error_id)
         
         # Test generic errors
         generic_error = Exception("Internal server error with sensitive data")
-        sanitized = self.error_handler.handle_error(generic_error, "token_validation")
-        self.assertIn("Token validation failed", sanitized)
-        self.assertNotIn("Internal server error", sanitized)
+        error_id2 = self.error_handler.handle_error(generic_error, "token_validation")
+        
+        # Verify error ID is returned (not the actual error message)
+        self.assertIsInstance(error_id2, str)
+        self.assertEqual(len(error_id2), 16)  # 8 bytes = 16 hex chars
+        self.assertNotIn("Internal server error", error_id2)
+        self.assertNotEqual(error_id, error_id2)  # Different errors should have different IDs
     
     def test_input_sanitization(self):
         """Test that input sanitization prevents malicious input."""
