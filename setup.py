@@ -34,8 +34,8 @@ def read_requirements():
 setup(
     name="agentauth",
     version="0.0.1",
-    author="AgentAuth Team",
-    author_email="team@agentauth.dev",
+    author="Ron Herardian",
+    author_email="agentauth@aethercloud.net",
     description="OAuth2/OIDC Authentication and JWT Token Validation Library",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
