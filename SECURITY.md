@@ -898,4 +898,86 @@ AgentAuth provides **significantly superior security** compared to the standard 
 - **Information disclosure** (secure error handling, audit logging)
 - **Code injection** (JWK validation, pattern detection)
 
-**Recommendation**: Use **AgentAuth** for security-critical applications and **Authlib** for general OAuth/OIDC needs where security is not the primary concern. 
+**Recommendation**: Use **AgentAuth** for security-critical applications and **Authlib** for general OAuth/OIDC needs where security is not the primary concern.
+
+---
+
+## 🔧 Security Example
+
+### Security Features Demonstration
+
+See `examples/security_example.py` for a comprehensive demonstration of AgentAuth's security features including:
+
+- **Cryptographic Authentication**: HMAC token generation and verification
+- **Rate Limiting**: Built-in rate limiting with DoS protection
+- **Anti-Replay Protection**: Nonce verification to prevent replay attacks
+- **Enhanced Token Validation**: Secure token validation with security checks
+- **Cryptographic Parameter Validation**: Key size and algorithm validation
+- **Secure Memory Management**: Secure memory wiping for sensitive data
+- **Security Best Practices**: Complete security workflow demonstration
+
+#### Running the Security Example
+
+```bash
+python examples/security_example.py
+```
+
+#### Example Output
+
+```
+AgentAuth Security Features Demonstration
+============================================================
+
+=== Simple Dictionary Storage Example ===
+✅ Stored token hash: 8baaba4eea3332ad80fbb494f00ee5bd79ebf51af0fd4589708bf13ab820a21b
+✅ Retrieved token hash: 8baaba4eea3332ad80fbb494f00ee5bd79ebf51af0fd4589708bf13ab820a21b
+✅ Retrieved JWKS keys: 1
+✅ After deletion: True
+✅ After clear: True
+
+=== Cryptographic Authentication Example ===
+✅ Generated auth token hash: 2cfbbf7d133a69ec28a7e3d11aaf84e91722d49c54978a4990d1d1a81646ef9f
+✅ Token verification: True
+✅ Wrong client ID rejected: True
+✅ Request 1 allowed: True
+✅ Request 2 allowed: True
+✅ Request 3 allowed: True
+✅ Request 4 allowed: True
+✅ Request 5 allowed: True
+✅ Nonce verification: True
+✅ Replay protection: True
+
+=== Enhanced Token Validation Example ===
+⚠️ Security check failed: Token validation failed: Invalid token header
+
+=== Secure Client Usage Example ===
+INFO:agentauth.security.framework:Security framework initialized
+✅ Authentication successful: [token_hash]
+✅ Token validation successful: [payload_hash]
+
+=== Cryptographic Parameter Validation Example ===
+✅ Secure RSA key: True
+✅ Secure EC key: True
+❌ Insecure RSA key: False
+❌ Insecure EC key: False
+
+=== Secure Memory Management Example ===
+✅ Original data: b'very-secret-token-data-that-must-be-protected'
+✅ After secure wipe: b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00...'
+
+=== Security Best Practices Example ===
+✅ 1. Security features enabled by default
+✅ 2. Authentication token hash: [hash]
+✅ 3. Rate limit check 1: True
+✅ 3. Rate limit check 2: True
+✅ 3. Rate limit check 3: True
+✅ 4. Cryptographic validation: True
+✅ 5. Secure nonces generated: [hash1] and [hash2]
+✅ 5. Nonces are different: True
+
+============================================================
+✅ All security examples completed successfully!
+🔒 Security features are working correctly.
+```
+
+This example demonstrates all the security features working together to provide comprehensive protection for OAuth2/OIDC authentication workflows. 
