@@ -407,6 +407,12 @@ See `examples/security_example.py` for a comprehensive demonstration of AgentAut
 ```bash
 python examples/google_cloud_iam_example.py
 ```
+
+#### Running the Security Features Example
+
+```bash
+python examples/security_example.py
+```
 ### Example Web Sequence
 
 <img width="781" height="1076" alt="agentauth_example_web_sequence" src="https://github.com/user-attachments/assets/1609edbd-1a01-408e-8719-79bb15fe2163" />
