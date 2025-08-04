@@ -1,0 +1,69 @@
+title Bi-Directional Federated Authentication (OIDC + OAuth2)
+
+note over Agent1,Agent2
+Access Tokens are JWTs for this flow
+end note
+
+Agent1->IdP1: Authenticate using OIDC (scope=openid profile)
+IdP1->Agent1: ID Token (JWT), Access Token (JWT)
+
+Agent2->IdP2: Authenticate using OIDC (scope=openid)
+IdP2->Agent2: ID Token (JWT)
+
+note right of Agent1
+Agent1 is authenticated by IdP1\nand holds an access token
+end note
+
+note right of Agent2
+Agent2 is authenticated by IdP2\nbut has no access token yet
+end note
+
+Agent2->IdP1: Discover OIDC metadata (/.well-known/openid-configuration)
+IdP1->Agent2: Return metadata (includes JWKS URI)
+
+# Agent1 sends task_detail data to Agent2
+
+Agent1->Agent2: Send data { "task_detail": "<input_ciphertext>" }\nAuthorization: Bearer <Access Token from IdP1>
+
+Agent2->IdP2: Request Access Token (Client Credentials Grant)
+IdP2->Agent2: Access Token (JWT)
+
+note right of Agent2
+Agent2 now holds access token\nand can authenticate requests
+end note
+
+Agent2->IdP1: Fetch IdP1's public keys (JWKS)
+
+note right of Agent2
+Validate Access Token from Agent1:
+- iss == IdP1
+- aud == Agent2
+- exp is valid
+- iat, nbf are valid
+- scope (if present) includes request
+- sub identifies requesting agent
+- Signature verifies with IdP1's key
+end note
+
+Agent1->IdP1: Discover federation metadata\n(trusted issuers, JWKS URI, etc.)
+IdP1->Agent1: Return metadata (includes IdP2 as trusted issuer)
+
+Agent1->IdP2: Discover OIDC metadata (/.well-known/openid-configuration)
+IdP2->Agent1: Return metadata (includes JWKS URI)
+
+# Agent2 sends task_result data to Agent1
+
+Agent2->Agent1: Send data { "task_result": "<output_ciphertext>" }\nAuthorization: Bearer <Access Token from IdP2>
+
+Agent1->IdP2: Fetch IdP2's public keys (JWKS)
+
+note right of Agent1
+Validate Access Token from Agent2:
+- iss == IdP2
+- aud == Agent1
+- exp is valid
+- iat, nbf are valid
+- scope (if present) includes request
+- sub identifies requester
+- Signature verifies with IdP2's key
+end note
