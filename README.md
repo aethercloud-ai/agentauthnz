@@ -398,6 +398,9 @@ See `examples/google_cloud_iam_example.py` for a complete example using Google C
    export GOOGLE_CLOUD_CLIENT_ID="your-client-id"
    export GOOGLE_CLOUD_CLIENT_SECRET="your-client-secret"
    ```
+### Example Web Sequence
+
+<img width="781" height="1076" alt="agentauth_example_web_sequence" src="https://github.com/user-attachments/assets/1609edbd-1a01-408e-8719-79bb15fe2163" />
 
 #### Running the Google Cloud IAM Example
 
