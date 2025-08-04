@@ -18,12 +18,6 @@ A comprehensive Python library for OAuth2 and OpenID Connect (OIDC) authenticati
 
 ## Installation
 
-### From PyPI (Recommended)
-
-```bash
-pip install agentauth
-```
-
 ### From Source
 
 ```bash
@@ -804,7 +798,7 @@ For issues and questions:
 
 ## Changelog
 
-### Version 1.0.0
+### Version 0.0.1
 - Initial release
 - OAuth2/OIDC client credentials flow
 - JWT token validation
