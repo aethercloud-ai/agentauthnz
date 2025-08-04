@@ -76,6 +76,13 @@ The AgentAuth library uses several environment variables for configuration. All 
 |----------|----------|---------|-------------|
 | `AGENTAUTH_DISABLE_SECURITY` | No | `false` | Disable security features (set to `true` to disable) |
 | `AGENTAUTH_RATE_LIMIT_PER_MINUTE` | No | `3000` | Maximum requests per minute for rate limiting |
+| `AGENTAUTH_MIN_TLS_VERSION` | No | `TLSv1.2` | Minimum TLS version (TLSv1.2, TLSv1.3) |
+| `AGENTAUTH_VERIFY_SSL` | No | `true` | Enable SSL certificate verification |
+| `AGENTAUTH_MAX_RESPONSE_SIZE` | No | `1048576` | Maximum response size in bytes (1MB) |
+| `AGENTAUTH_MAX_PROCESSING_TIME` | No | `30` | Maximum processing time in seconds |
+| `AGENTAUTH_MAX_CONCURRENT_REQUESTS` | No | `10` | Maximum concurrent requests |
+| `AGENTAUTH_AUDIT_LOG_FILE` | No | `None` | Path to audit log file |
+| `AGENTAUTH_ENABLE_DEBUG` | No | `false` | Enable debug mode for security components |
 | `GOOGLE_CLOUD_CLIENT_ID` | No* | None | Google Cloud OAuth2 client ID (for Google Cloud examples) |
 | `GOOGLE_CLOUD_CLIENT_SECRET` | No* | None | Google Cloud OAuth2 client secret (for Google Cloud examples) |
 | `GOOGLE_CLOUD_PROJECT` | No* | None | Google Cloud project ID (for Google Cloud examples) |
@@ -92,7 +99,50 @@ export AGENTAUTH_DISABLE_SECURITY=true
 
 # Configure rate limiting
 export AGENTAUTH_RATE_LIMIT_PER_MINUTE=5000
+
+# Configure TLS settings
+export AGENTAUTH_MIN_TLS_VERSION=TLSv1.3
+export AGENTAUTH_VERIFY_SSL=true
+
+# Configure resource limits
+export AGENTAUTH_MAX_RESPONSE_SIZE=1048576  # 1MB
+export AGENTAUTH_MAX_PROCESSING_TIME=30     # 30 seconds
+export AGENTAUTH_MAX_CONCURRENT_REQUESTS=10 # 10 concurrent
+
+# Configure audit logging
+export AGENTAUTH_AUDIT_LOG_FILE=/var/log/security.log
+export AGENTAUTH_ENABLE_DEBUG=false
 ```
+
+#### **Configurable Security Policies**
+
+AgentAuth supports fine-grained security policy configuration using the SecurityBuilder pattern:
+
+```python
+from agentauth import SecurityBuilder
+
+# High-security policy
+high_security_config = (SecurityBuilder()
+    .with_security_enabled(True)
+    .with_input_limits(max_token_length=4096, max_url_length=1024)
+    .with_resource_limits(max_response_size=512*1024, max_processing_time=15)
+    .with_audit_logging(audit_log_file="/var/log/security.log", enable_debug=False)
+    .with_rate_limiting(rate_limit_per_minute=1000)
+    .with_tls_settings(min_tls_version="TLSv1.3", verify_ssl=True)
+    .build())
+
+# Development policy
+dev_security_config = (SecurityBuilder()
+    .with_security_enabled(True)
+    .with_input_limits(max_token_length=8192, max_url_length=2048)
+    .with_resource_limits(max_response_size=1024*1024, max_processing_time=30)
+    .with_audit_logging(audit_log_file=None, enable_debug=True)
+    .with_rate_limiting(rate_limit_per_minute=5000)
+    .with_tls_settings(min_tls_version="TLSv1.2", verify_ssl=True)
+    .build())
+```
+
+> **📖 For detailed security configuration examples, see [SECURITY.md](SECURITY.md)**
 
 ### Security Features
 
@@ -114,6 +164,62 @@ AgentAuth implements comprehensive security measures to protect sensitive data:
 - **Parameter Validation**: Cryptographic parameters are validated for security
 - **Anti-Replay Protection**: Nonce-based protection against token replay attacks
 - **SSRF Protection**: URL validation prevents Server-Side Request Forgery attacks
+- **HMAC Authentication**: HMAC-based token generation and verification
+- **Secure Random Generation**: Uses cryptographically secure random number generation
+- **Memory Washing**: Securely wipes sensitive data from memory
+
+#### **TLS/SSL Security**
+- **TLS 1.3 Preferred**: Enforces TLS 1.3 with TLS 1.2 fallback for compatibility
+- **Secure Cipher Suites**: Enforces AES-GCM, ChaCha20-Poly1305, and other strong ciphers
+- **Certificate Validation**: Mandatory SSL certificate verification and hostname matching
+- **Downgrade Protection**: Prevents downgrade to insecure protocols (SSLv2, SSLv3, TLSv1, TLSv1.1)
+
+#### **Resource Limiting & DoS Protection**
+- **Response Size Limits**: Prevents memory exhaustion attacks (1MB default limit)
+- **Processing Time Limits**: CPU exhaustion protection (30-second timeout)
+- **Concurrency Control**: Limits concurrent requests (10 max default)
+- **Rate Limiting**: Prevents abuse (3000 requests/minute default)
+- **Memory Usage Control**: Monitors and limits memory consumption
+
+#### **Code Injection Protection**
+- **Algorithm Validation**: Whitelist of allowed cryptographic algorithms
+- **Key Type Validation**: Validates JWK key types against allowed list
+- **Dangerous Pattern Detection**: Identifies code injection attempts in inputs
+- **Input Content Validation**: Validates token and URL content for malicious patterns
+- **Safe Value Checking**: Ensures all input values are safe before processing
+
+#### **Configurable Security Policies**
+- **Granular Control**: Fine-grained security policy configuration
+- **Runtime Updates**: Dynamic security policy changes without restart
+- **Environment-Specific**: Different policies for different environments
+- **Security Builder Pattern**: Type-safe security configuration using builder pattern
+- **Default Secure Settings**: Secure defaults for all configurations
+
+#### **Security Framework Integration**
+- **Unified Security Interface**: Single point of security control
+- **Component Coordination**: Integrated security component management
+- **Policy Enforcement**: Consistent security policy application across components
+- **Security State Management**: Tracks security framework state
+
+#### **Security Performance & Monitoring**
+- **Security Performance Metrics**: Monitors security operation performance
+- **Resource Usage Tracking**: Tracks CPU, memory, and network usage
+- **Security Event Correlation**: Links related security events
+- **Real-time Monitoring**: Live security event monitoring
+
+#### **Developer Security Tools**
+- **Security Testing**: Comprehensive security test suite (99 security tests)
+- **Security Examples**: Secure implementation examples provided
+- **Security Documentation**: Detailed security documentation and best practices
+- **Security Utilities**: Helper functions for secure operations
+- **Security Validation**: Built-in security validation tools
+
+#### **Advanced Security Features**
+- **SSRF Protection**: Blocks requests to private IP ranges and metadata endpoints
+- **XSS Prevention**: Detects and blocks cross-site scripting attempts
+- **Path Traversal Protection**: Prevents directory traversal attacks
+- **Algorithm Confusion Protection**: Prevents algorithm confusion attacks
+- **Key Size Validation**: Ensures minimum key sizes (2048-bit RSA minimum)
 
 > **📖 For detailed security information, see [SECURITY.md](SECURITY.md)**
 
@@ -371,7 +477,115 @@ results = validate_multiple_token_signatures(
     audience="your-client-id",
     issuer="https://accounts.google.com"
 )
+
+### SecurityFramework Class
+
+The unified security framework that coordinates all security components.
+
+#### Constructor
+
+```python
+SecurityFramework(config: SecurityConfig)
 ```
+
+**Parameters:**
+- `config`: Security configuration object
+
+#### Methods
+
+##### validate_input(input_type: str, value: str) -> str
+
+Validate and sanitize input based on type.
+
+**Parameters:**
+- `input_type`: Type of input ('token', 'url', 'client_id', 'jwk')
+- `value`: Input value to validate
+
+**Returns:**
+- Sanitized input value
+
+**Example:**
+```python
+from agentauth import SecurityFramework, SecurityConfig
+
+security = SecurityFramework(SecurityConfig())
+sanitized_token = security.validate_input('token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...')
+```
+
+##### log_security_event(event_type: str, details: dict, severity: str = 'INFO')
+
+Log a security event with sanitization.
+
+**Parameters:**
+- `event_type`: Type of security event
+- `details`: Event details
+- `severity`: Severity level
+
+**Example:**
+```python
+security.log_security_event('authentication_attempt', {
+    'client_id': 'client-123',
+    'success': True
+}, 'INFO')
+```
+
+##### handle_error(error: Exception, context: str = None) -> str
+
+Handle errors securely without information disclosure.
+
+**Parameters:**
+- `error`: Exception to handle
+- `context`: Additional context for logging
+
+**Returns:**
+- Error ID string for tracking
+
+**Example:**
+```python
+try:
+    # Some operation
+    pass
+except Exception as e:
+    error_id = security.handle_error(e, 'authentication')
+```
+
+##### validate_token_secure(token: str, jwks: dict, **kwargs) -> dict
+
+Validate token with enhanced security checks.
+
+**Parameters:**
+- `token`: JWT token to validate
+- `jwks`: JWKS dictionary
+- `**kwargs`: Additional validation parameters
+
+**Returns:**
+- Token payload
+
+**Example:**
+```python
+payload = security.validate_token_secure(
+    token=access_token,
+    jwks=jwks,
+    audience="your-client-id",
+    issuer="https://accounts.google.com"
+)
+```
+
+##### get_resource_usage_stats() -> dict
+
+Get resource usage statistics.
+
+**Returns:**
+- Resource usage statistics
+
+**Example:**
+```python
+stats = security.get_resource_usage_stats()
+print(f"Active requests: {stats['active_requests']}")
+print(f"Rate limit status: {stats['rate_limit_status']}")
+```
+
+> **📖 For detailed security framework information, see [SECURITY.md](SECURITY.md)**
 
 ## Examples
 
