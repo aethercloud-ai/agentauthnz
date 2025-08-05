@@ -39,17 +39,28 @@ pip install -e ".[dev]"
 ### Basic Usage
 
 ```python
-from agentauth import OAuth2OIDCClient
+from agentauth.core.client import OAuth2OIDCClient
+from agentauth.config.client_config import ClientConfig, ClientBuilder
+from agentauth.config.security_config import SecurityConfig, SecurityBuilder
+
+# Create security configuration
+security_config = (SecurityBuilder()
+                  .with_security_enabled(True)
+                  .with_input_limits(max_token_length=8192)
+                  .with_resource_limits(max_response_size=1024*1024)
+                  .build())
+
+# Create client configuration
+client_config = (ClientBuilder()
+                .with_idp("Google Cloud IAM", "https://accounts.google.com")
+                .with_credentials("your-client-id", "your-client-secret")
+                .with_scope("https://www.googleapis.com/auth/cloud-platform")
+                .with_timeout(30)
+                .with_security(security_config)
+                .build())
 
 # Initialize client (security enabled by default)
-client = OAuth2OIDCClient(
-    idp_name="Google Cloud IAM",
-    idp_endpoint="https://accounts.google.com",
-    client_id="your-client-id",
-    client_secret="your-client-secret",
-    scope="https://www.googleapis.com/auth/cloud-platform"
-    # Security is enabled by default - set AGENTAUTH_DISABLE_SECURITY=true to disable
-)
+client = OAuth2OIDCClient(client_config)
 
 # Authenticate and get access token
 access_token = client.authenticate()
@@ -113,7 +124,7 @@ export AGENTAUTH_ENABLE_DEBUG=false
 AgentAuth supports fine-grained security policy configuration using the SecurityBuilder pattern:
 
 ```python
-from agentauth import SecurityBuilder
+from agentauth.config.security_config import SecurityBuilder
 
 # High-security policy
 high_security_config = (SecurityBuilder()
@@ -233,9 +244,122 @@ export GOOGLE_APPLICATION_CREDENTIALS="path/to/service-account-key.json"
 # Add current directory to Python path (if import errors occur)
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 ```
-```
 
 ## API Reference
+
+### Configuration Classes
+
+#### ClientConfig Class
+
+Configuration class for OAuth2/OIDC client settings.
+
+```python
+from agentauth.config.client_config import ClientConfig
+
+config = ClientConfig(
+    idp_name="Google Cloud IAM",
+    idp_endpoint="https://accounts.google.com",
+    client_id="your-client-id",
+    client_secret="your-client-secret",
+    scope="https://www.googleapis.com/auth/cloud-platform",
+    timeout=30,
+    jwks_cache_ttl=3600,
+    cert_chain="/path/to/certificate-chain.pem"
+)
+```
+
+#### SecurityConfig Class
+
+Configuration class for security settings.
+
+```python
+from agentauth.config.security_config import SecurityConfig
+
+security_config = SecurityConfig(
+    enable_security=True,
+    max_token_length=8192,
+    max_url_length=2048,
+    max_response_size=1024*1024,
+    max_processing_time=30,
+    max_concurrent_requests=10,
+    rate_limit_per_minute=3000,
+    audit_log_file="/var/log/security.log",
+    enable_debug=False,
+    min_tls_version="TLSv1.2",
+    verify_ssl=True
+)
+```
+
+#### ErrorConfig Class
+
+Configuration class for error handling settings.
+
+```python
+from agentauth.config.error_config import ErrorConfig
+
+error_config = ErrorConfig(
+    enable_debug=False,
+    sanitize_error_messages=True,
+    log_error_details=True,
+    error_log_file="/var/log/errors.log",
+    generate_error_ids=True,
+    report_security_violations=True
+)
+```
+
+### Builder Pattern Classes
+
+#### ClientBuilder Class
+
+Builder pattern for creating ClientConfig instances.
+
+```python
+from agentauth.config.client_config import ClientBuilder
+
+client_config = (ClientBuilder()
+    .with_idp("Google Cloud IAM", "https://accounts.google.com")
+    .with_credentials("your-client-id", "your-client-secret")
+    .with_scope("https://www.googleapis.com/auth/cloud-platform")
+    .with_timeout(30)
+    .with_jwks_cache_ttl(3600)
+    .with_cert_chain("/path/to/certificate-chain.pem")
+    .with_security(security_config)
+    .build())
+```
+
+#### SecurityBuilder Class
+
+Builder pattern for creating SecurityConfig instances.
+
+```python
+from agentauth.config.security_config import SecurityBuilder
+
+security_config = (SecurityBuilder()
+    .with_security_enabled(True)
+    .with_input_limits(max_token_length=8192, max_url_length=2048, max_client_id_length=64)
+    .with_resource_limits(max_response_size=1024*1024, max_processing_time=30, 
+                         max_concurrent_requests=10, max_request_rate=3000)
+    .with_audit_logging(audit_log_file="/var/log/security.log", enable_debug=False)
+    .with_rate_limiting(rate_limit_per_minute=3000)
+    .with_tls_settings(min_tls_version="TLSv1.2", verify_ssl=True)
+    .build())
+```
+
+#### ErrorConfigBuilder Class
+
+Builder pattern for creating ErrorConfig instances.
+
+```python
+from agentauth.config.error_config import ErrorConfigBuilder
+
+error_config = (ErrorConfigBuilder()
+    .with_debug_enabled(False)
+    .with_error_sanitization(True)
+    .with_error_logging(log_details=True, error_log_file="/var/log/errors.log")
+    .with_error_correlation(True)
+    .with_security_reporting(True)
+    .build())
+```
 
 ### OAuth2OIDCClient Class
 
@@ -244,38 +368,24 @@ The main class for OAuth2/OIDC operations.
 #### Constructor
 
 ```python
-OAuth2OIDCClient(
-    idp_name: str,
-    idp_endpoint: str,
-    client_id: str,
-    client_secret: str,
-    scope: Optional[str] = None,
-    timeout: int = 30,
-    jwks_cache_ttl: int = 3600,
-    enable_security: Optional[bool] = None,
-    cert_chain: Optional[str] = None
-)
+from agentauth.core.client import OAuth2OIDCClient
+from agentauth.config.client_config import ClientConfig
+
+client = OAuth2OIDCClient(config: ClientConfig)
 ```
 
 **Parameters:**
-- `idp_name`: Name of the Identity Provider
-- `idp_endpoint`: Base URL of the IdP
-- `client_id`: OAuth2 client ID
-- `client_secret`: OAuth2 client secret
-- `scope`: OAuth2 scope(s) (optional)
-- `timeout`: HTTP request timeout in seconds
-- `jwks_cache_ttl`: JWKS cache TTL in seconds
-- `enable_security`: Enable security features (defaults to True unless AGENTAUTH_DISABLE_SECURITY is set)
-- `cert_chain`: Path to certificate chain for authentication
+- `config`: ClientConfig object containing all client settings
 
 #### Methods
 
-##### authenticate(force_refresh: bool = False) -> str
+##### authenticate(force_refresh: bool = False, auth_token: Optional[str] = None) -> str
 
 Authenticate using OAuth2 client credentials flow and return access token.
 
 **Parameters:**
 - `force_refresh`: Force token refresh even if cached token is still valid
+- `auth_token`: Optional authentication token for additional security
 
 **Returns:**
 - Access token string
@@ -287,6 +397,10 @@ access_token = client.authenticate()
 
 # Force refresh
 access_token = client.authenticate(force_refresh=True)
+
+# With authentication token
+auth_token = auth.generate_hmac_token(client.client_id)
+access_token = client.authenticate(auth_token=auth_token)
 ```
 
 ##### get_jwks(force_refresh: bool = False) -> Dict
@@ -305,7 +419,7 @@ jwks = client.get_jwks()
 print(f"Retrieved {len(jwks.get('keys', []))} keys")
 ```
 
-##### validate_token(token: str, token_type: str = 'access_token', audience: Optional[str] = None, issuer: Optional[str] = None) -> Dict
+##### validate_token(token: str, token_type: str = 'access_token', audience: Optional[str] = None, issuer: Optional[str] = None, auth_token: Optional[str] = None) -> Dict
 
 Validate a JWT token and return its payload.
 
@@ -314,6 +428,7 @@ Validate a JWT token and return its payload.
 - `token_type`: Type of token ('access_token', 'id_token', etc.)
 - `audience`: Expected audience (aud) claim
 - `issuer`: Expected issuer (iss) claim
+- `auth_token`: Optional authentication token for additional security
 
 **Returns:**
 - Token payload as dictionary
@@ -392,7 +507,7 @@ Discover OIDC configuration from an IdP endpoint.
 
 **Example:**
 ```python
-from agentauth import discover_oidc_config
+from agentauth.core.discovery import discover_oidc_config
 
 config = discover_oidc_config("https://accounts.google.com")
 print(f"Token endpoint: {config.get('token_endpoint')}")
@@ -412,7 +527,7 @@ Retrieve JWKS from a specified URI.
 
 **Example:**
 ```python
-from agentauth import retrieve_jwks
+from agentauth.core.discovery import retrieve_jwks
 
 jwks = retrieve_jwks("https://www.googleapis.com/oauth2/v1/certs")
 print(f"Retrieved {len(jwks.get('keys', []))} keys")
@@ -433,7 +548,7 @@ Validate JWT token signature using provided JWKS.
 
 **Example:**
 ```python
-from agentauth import validate_token_signature
+from agentauth.core.validation import validate_token_signature
 
 payload = validate_token_signature(
     token=access_token,
@@ -458,7 +573,7 @@ Validate multiple JWT token signatures using provided JWKS.
 
 **Example:**
 ```python
-from agentauth import validate_multiple_token_signatures
+from agentauth.core.validation import validate_multiple_token_signatures
 
 tokens = [
     {'token': token1, 'type': 'access_token'},
@@ -472,122 +587,233 @@ results = validate_multiple_token_signatures(
     issuer="https://accounts.google.com"
 )
 
-### SecurityFramework Class
-
-The unified security framework that coordinates all security components.
-
-#### Constructor
-
-```python
-SecurityFramework(config: SecurityConfig)
+for result in results:
+    if result['valid']:
+        print(f"Token valid: {result['payload'].get('sub')}")
+    else:
+        print(f"Token invalid: {result['error']}")
 ```
 
-**Parameters:**
-- `config`: Security configuration object
+### Security Components
 
-#### Methods
+#### CryptographicAuthenticator Class
 
-##### validate_input(input_type: str, value: str) -> str
+Cryptographic authentication for library access.
 
-Validate and sanitize input based on type.
-
-**Parameters:**
-- `input_type`: Type of input ('token', 'url', 'client_id', 'jwk')
-- `value`: Input value to validate
-
-**Returns:**
-- Sanitized input value
-
-**Example:**
 ```python
-from agentauth import SecurityFramework, SecurityConfig
+from agentauth.security.authenticator import CryptographicAuthenticator
 
-security = SecurityFramework(SecurityConfig())
-sanitized_token = security.validate_input('token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...')
+auth = CryptographicAuthenticator()
+
+# Generate authentication token
+auth_token = auth.generate_hmac_token("client_id_123")
+
+# Verify token
+is_valid = auth.verify_hmac_token(auth_token, "client_id_123")
+
+# Check rate limit
+allowed = auth.check_rate_limit("client_id_123")
+
+# Verify nonce
+nonce = generate_secure_nonce()
+is_valid = auth.verify_nonce(nonce)
 ```
 
-##### log_security_event(event_type: str, details: dict, severity: str = 'INFO')
+#### InputSanitizer Class
 
-Log a security event with sanitization.
+Enhanced input validation and sanitization.
 
-**Parameters:**
-- `event_type`: Type of security event
-- `details`: Event details
-- `severity`: Severity level
-
-**Example:**
 ```python
-security.log_security_event('authentication_attempt', {
-    'client_id': 'client-123',
-    'success': True
-}, 'INFO')
+from agentauth.security.components.input_sanitizer import InputSanitizer
+
+sanitizer = InputSanitizer()
+
+# Sanitize JWT token
+token = sanitizer.sanitize_jwt_token("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...")
+
+# Sanitize URL
+url = sanitizer.sanitize_url("https://api.example.com/jwks")
+
+# Sanitize client ID
+client_id = sanitizer.sanitize_client_id("client_123")
+
+# Sanitize JWK
+sanitized_jwk = sanitizer.sanitize_jwk(jwk_data)
 ```
 
-##### handle_error(error: Exception, context: str = None) -> str
+#### ResourceLimiter Class
 
-Handle errors securely without information disclosure.
+Resource limiting and DoS protection.
 
-**Parameters:**
-- `error`: Exception to handle
-- `context`: Additional context for logging
-
-**Returns:**
-- Error ID string for tracking
-
-**Example:**
 ```python
+from agentauth.security.components.resource_limiter import ResourceLimiter
+
+limiter = ResourceLimiter()
+
+# Limit response size
+response = limiter.limit_response_size(response)
+
+# Limit processing time
+result = limiter.limit_processing_time(expensive_function, *args)
+
+# Acquire request slot
+limiter.acquire_request_slot(client_id)
+
+# Release request slot
+limiter.release_request_slot()
+
+# Get resource usage stats
+stats = limiter.get_resource_usage_stats()
+```
+
+#### SecurityAuditLogger Class
+
+Advanced security audit logging.
+
+```python
+from agentauth.security.components.audit_logger import SecurityAuditLogger
+
+audit_logger = SecurityAuditLogger(log_file="security_audit.log")
+
+# Log authentication attempts
+audit_logger.log_authentication_attempt("client_123", True)
+
+# Log token validation
+audit_logger.log_token_validation("token_hash", True, validation_details)
+
+# Log security violations
+audit_logger.log_security_violation("injection_attempt", details)
+
+# Log rate limit violations
+audit_logger.log_rate_limit_violation("client_123", 100)
+
+# Get audit summary
+summary = audit_logger.get_audit_summary(time_window_minutes=60)
+```
+
+#### CodeInjectionProtector Class
+
+Protection against code injection attacks.
+
+```python
+from agentauth.security.components.injection_protector import CodeInjectionProtector
+
+protector = CodeInjectionProtector()
+
+# Validate JWK structure
+if protector.validate_jwk_structure(jwk):
+    sanitized_jwk = protector.sanitize_jwk_data(jwk)
+
+# Validate algorithm name
+if protector.validate_algorithm_name("RS256"):
+    # Use algorithm safely
+    pass
+
+# Validate key type
+if protector.validate_key_type("RSA"):
+    # Use key type safely
+    pass
+
+# Get allowed algorithms
+allowed_algorithms = protector.get_allowed_algorithms()
+
+# Get allowed key types
+allowed_key_types = protector.get_allowed_key_types()
+```
+
+#### SecureErrorHandler Class
+
+Secure error handling to prevent information disclosure.
+
+```python
+from agentauth.security.components.error_handler import SecureErrorHandler
+
+error_handler = SecureErrorHandler(enable_debug=False)
+
+# Handle errors securely
 try:
     # Some operation
     pass
 except Exception as e:
-    error_id = security.handle_error(e, 'authentication')
+    error_message = error_handler.handle_error(e, "operation_context")
+    # error_message contains sanitized message for users
+
+# Get detailed error information
+error_details = error_handler.get_error_details(e, "operation_context")
+
+# Log security violations
+error_handler.log_security_violation("injection_attempt", details, "WARNING")
+
+# Sanitize exception for logging
+sanitized_exception = error_handler.sanitize_exception_for_logging(e)
 ```
 
-##### validate_token_secure(token: str, jwks: dict, **kwargs) -> dict
+#### SecureHTTPClient Class
 
-Validate token with enhanced security checks.
+Secure HTTP client with TLS 1.3 preferred, TLS 1.2 fallback.
 
-**Parameters:**
-- `token`: JWT token to validate
-- `jwks`: JWKS dictionary
-- `**kwargs`: Additional validation parameters
-
-**Returns:**
-- Token payload
-
-**Example:**
 ```python
-payload = security.validate_token_secure(
-    token=access_token,
-    jwks=jwks,
-    audience="your-client-id",
-    issuer="https://accounts.google.com"
-)
+from agentauth.security.components.http_client import SecureHTTPClient, verify_tls_version
+
+# Create secure HTTP client
+http_client = SecureHTTPClient(timeout=30, verify_ssl=True)
+
+# Make secure GET request
+response = http_client.get("https://api.example.com/data")
+
+# Verify TLS version
+if verify_tls_version(response):
+    print("✅ TLS 1.3 preferred, TLS 1.2 fallback working correctly")
+
+# Make secure POST request
+response = http_client.post("https://api.example.com/token", data=post_data)
+
+# Close client
+http_client.close()
 ```
 
-##### get_resource_usage_stats() -> dict
+### Security Utility Functions
 
-Get resource usage statistics.
+#### generate_secure_nonce() -> str
 
-**Returns:**
-- Resource usage statistics
+Generate a secure nonce for anti-replay protection.
 
-**Example:**
 ```python
-stats = security.get_resource_usage_stats()
-print(f"Active requests: {stats['active_requests']}")
-print(f"Rate limit status: {stats['rate_limit_status']}")
+from agentauth.utils.crypto import generate_secure_nonce
+
+nonce = generate_secure_nonce()
 ```
 
-> **📖 For detailed security framework information, see [SECURITY.md](SECURITY.md)**
+#### secure_wipe_memory(data: bytes) -> None
+
+Securely wipe sensitive data from memory.
+
+```python
+from agentauth.utils.crypto import secure_wipe_memory
+
+sensitive_data = b"secret_token_data"
+secure_wipe_memory(sensitive_data)
+```
+
+#### validate_cryptographic_parameters(jwk: Dict) -> bool
+
+Validate cryptographic parameters in JWK.
+
+```python
+from agentauth.utils.crypto import validate_cryptographic_parameters
+
+if validate_cryptographic_parameters(jwk):
+    # Use key safely
+    pass
+else:
+    raise SecurityError("Insecure cryptographic parameters")
+```
 
 ## Examples
 
 ### Google Cloud IAM Example
 
 See `examples/google_cloud_iam_example.py` for a complete example using Google Cloud IAM.
-
-
 
 #### Setup for Google Cloud IAM
 
@@ -614,6 +840,15 @@ See `examples/google_cloud_iam_example.py` for a complete example using Google C
 python examples/google_cloud_iam_example.py
 ```
 
+### Security Example
+
+See `examples/security_example.py` for a comprehensive demonstration of AgentAuth's security features.
+
+#### Running the Security Example
+
+```bash
+python examples/security_example.py
+```
 
 ### Example Web Sequence
 
@@ -655,8 +890,8 @@ For comprehensive test documentation, see [`tests/TEST_AGENTAUTH.md`](tests/TEST
 
 The comprehensive test suite provides:
 
-- ✅ **100% Function Coverage** - All 67 functions/classes tested
-- ✅ **100% Success Rate** - 140/140 tests passing
+- ✅ **100% Function Coverage** - All 119 functions/classes tested
+- ✅ **100% Success Rate** - 151/151 tests passing
 - ✅ **Complete Mocking** - All HTTP requests properly mocked to avoid network dependencies
 - ✅ **Security Testing** - All security components thoroughly tested
 - ✅ **Error Scenarios** - Comprehensive error handling and edge case testing
@@ -680,7 +915,7 @@ python -m unittest tests.test_config -v
 
 ## Error Handling
 
-The library provides comprehensive error handling with the `OAuth2OIDCError` exception.
+The library provides comprehensive error handling with the `OAuth2OIDCError` and `SecurityError` exceptions.
 
 ### Common Error Scenarios
 
@@ -706,6 +941,15 @@ The library provides comprehensive error handling with the `OAuth2OIDCError` exc
        jwks = client.get_jwks()
    except OAuth2OIDCError as e:
        print(f"JWKS retrieval failed: {e}")
+   ```
+
+4. **Security Violations**:
+   ```python
+   try:
+       # Some operation
+       pass
+   except SecurityError as e:
+       print(f"Security violation: {e}")
    ```
 
 ## Supported IdPs

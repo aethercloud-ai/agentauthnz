@@ -16,6 +16,15 @@ This document outlines the security enhancements implemented in the AgentAuth li
   - Expired tokens are automatically rejected
 - **Code Example**:
   ```python
+  from agentauth.core.client import OAuth2OIDCClient
+  from agentauth.config.client_config import ClientBuilder
+  from agentauth.config.security_config import SecurityBuilder
+  
+  # Create client with security enabled
+  security_config = SecurityBuilder().with_security_enabled(True).build()
+  client_config = ClientBuilder().with_idp("Test IdP", "https://test.issuer.com").with_credentials("client-id", "client-secret").with_security(security_config).build()
+  client = OAuth2OIDCClient(client_config)
+  
   # ✅ Good - Token with exp claim
   token_with_exp = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MzQ1Njc4OTB9..."
   payload = client.validate_token(token_with_exp)  # ✅ Success
@@ -48,7 +57,7 @@ This document outlines the security enhancements implemented in the AgentAuth li
 - Dangerous host detection for SSRF prevention
 
 ```python
-from agentauth import InputSanitizer
+from agentauth.security.components.input_sanitizer import InputSanitizer
 
 # Initialize sanitizer
 sanitizer = InputSanitizer()
@@ -75,7 +84,7 @@ client_id = sanitizer.sanitize_client_id("client_123")
 - Security violation logging
 
 ```python
-from agentauth import SecureErrorHandler
+from agentauth.security.components.error_handler import SecureErrorHandler
 
 # Initialize error handler
 error_handler = SecureErrorHandler(enable_debug=False)
@@ -109,7 +118,7 @@ except Exception as e:
 - Internal data: `confidential`, `restricted`, `internal`
 
 ```python
-from agentauth import SecurityAuditLogger
+from agentauth.security.components.audit_logger import SecurityAuditLogger
 
 # Initialize audit logger
 audit_logger = SecurityAuditLogger(log_file="security_audit.log")
@@ -153,7 +162,7 @@ def sanitize_jwt_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
 - CPU usage limits
 
 ```python
-from agentauth import ResourceLimiter
+from agentauth.security.components.resource_limiter import ResourceLimiter
 
 # Initialize resource limiter
 limiter = ResourceLimiter()
@@ -209,7 +218,7 @@ audit_logger.log_security_violation("injection_attempt", details)
 - Safe value checking
 
 ```python
-from agentauth import CodeInjectionProtector
+from agentauth.security.components.injection_protector import CodeInjectionProtector
 
 # Initialize code injection protector
 protector = CodeInjectionProtector()
@@ -248,7 +257,8 @@ token = self._access_token_cache.get('access_token', '')
 - Anti-replay protection with nonces
 
 ```python
-from agentauth import CryptographicAuthenticator, generate_secure_nonce
+from agentauth.security.authenticator import CryptographicAuthenticator
+from agentauth.utils.crypto import generate_secure_nonce
 
 # Initialize authenticator
 auth = CryptographicAuthenticator()
@@ -271,16 +281,18 @@ is_valid = auth.verify_hmac_token(auth_token, "client_id_123")
 - Rate limiting integration
 
 ```python
-from agentauth import OAuth2OIDCClient
+from agentauth.core.client import OAuth2OIDCClient
+from agentauth.config.client_config import ClientBuilder
+from agentauth.config.security_config import SecurityBuilder
+
+# Create security configuration
+security_config = SecurityBuilder().with_security_enabled(True).build()
+
+# Create client configuration
+client_config = ClientBuilder().with_idp("Google Cloud IAM", "https://accounts.google.com").with_credentials("your-client-id", "your-client-secret").with_security(security_config).build()
 
 # Initialize client with security enabled
-client = OAuth2OIDCClient(
-    idp_name="Google Cloud IAM",
-    idp_endpoint="https://accounts.google.com",
-    client_id="your-client-id",
-    client_secret="your-client-secret",
-    enable_security=True  # Enable security features
-)
+client = OAuth2OIDCClient(client_config)
 
 # Validate token with authentication
 auth_token = auth.generate_hmac_token(client.client_id)
@@ -300,7 +312,7 @@ payload = client.validate_token(
 - Reused nonces are rejected
 
 ```python
-from agentauth import generate_secure_nonce
+from agentauth.utils.crypto import generate_secure_nonce
 
 # Generate nonce for token
 nonce = generate_secure_nonce()
@@ -336,7 +348,7 @@ header = {
 - Protection against downgrade attacks
 
 ```python
-from agentauth import SecureHTTPClient, verify_tls_version
+from agentauth.security.components.http_client import SecureHTTPClient, verify_tls_version
 
 # Use secure HTTP client with TLS 1.3 preferred, TLS 1.2 fallback
 http_client = SecureHTTPClient(timeout=30, verify_ssl=True)
@@ -365,7 +377,7 @@ if verify_tls_version(response):
 - Secure connection logging and monitoring
 
 ```python
-from agentauth import secure_wipe_memory
+from agentauth.utils.crypto import secure_wipe_memory
 
 # Securely wipe sensitive data
 sensitive_data = b"secret_token_data"
@@ -375,6 +387,268 @@ secure_wipe_memory(sensitive_data)
 ## 🛡️ Security Best Practices
 
 > **Note:** All code examples in this section are tested and known good for the current implementation.
+
+### SecurityFramework Class
+
+The `SecurityFramework` class provides a unified interface for all security components, making it easy to coordinate security operations across the application.
+
+#### Basic Usage
+
+```python
+from agentauth.security.framework import SecurityFramework
+from agentauth.config.security_config import SecurityConfig
+
+# Create security configuration
+security_config = SecurityConfig(
+    enable_security=True,
+    max_token_length=8192,
+    max_url_length=2048,
+    max_response_size=1024*1024,
+    max_processing_time=30,
+    max_concurrent_requests=10,
+    rate_limit_per_minute=3000,
+    audit_log_file="/var/log/security.log",
+    enable_debug=False,
+    min_tls_version="TLSv1.2",
+    verify_ssl=True
+)
+
+# Initialize security framework
+security = SecurityFramework(security_config)
+```
+
+#### Input Validation
+
+```python
+# Validate and sanitize different types of input
+sanitized_token = security.validate_input('token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...')
+sanitized_url = security.validate_input('url', 'https://api.example.com/jwks')
+sanitized_client_id = security.validate_input('client_id', 'client_123')
+sanitized_jwk = security.validate_input('jwk', jwk_data)
+```
+
+#### Security Event Logging
+
+```python
+# Log security events with sanitization
+security.log_security_event('authentication_attempt', {
+    'client_id': 'client-123',
+    'success': True,
+    'timestamp': '2024-01-01T00:00:00Z'
+}, 'INFO')
+
+security.log_security_event('token_validation', {
+    'token_hash': 'abc123...',
+    'valid': True,
+    'audience': 'api.example.com'
+}, 'INFO')
+
+security.log_security_event('security_violation', {
+    'type': 'injection_attempt',
+    'input': 'suspicious_input',
+    'pattern': 'script_tag'
+}, 'WARNING')
+```
+
+#### Secure Error Handling
+
+```python
+try:
+    # Some operation that might fail
+    result = perform_sensitive_operation()
+except Exception as e:
+    # Handle error securely without information disclosure
+    error_id = security.handle_error(e, 'sensitive_operation')
+    print(f"Operation failed. Error ID: {error_id}")
+```
+
+#### Resource Management
+
+```python
+# Acquire resource slot for rate limiting
+security.acquire_resource_slot('client-123')
+
+try:
+    # Perform operation
+    result = perform_operation()
+finally:
+    # Always release resource slot
+    security.release_resource_slot()
+```
+
+#### Secure Token Validation
+
+```python
+# Validate token with enhanced security checks
+payload = security.validate_token_secure(
+    token=access_token,
+    jwks=jwks,
+    audience='api.example.com',
+    issuer='https://accounts.google.com'
+)
+```
+
+#### JWK Structure Validation
+
+```python
+# Validate JWK structure for security
+if security.validate_jwk_structure(jwk):
+    # Process JWK safely
+    print("JWK structure is valid and secure")
+else:
+    raise SecurityError("Invalid JWK structure")
+```
+
+#### JWT Payload Sanitization
+
+```python
+# Sanitize JWT payload to remove sensitive information
+raw_payload = {
+    'sub': 'user123',
+    'name': 'John Doe',
+    'email': 'john@example.com',
+    'ssn': '123-45-6789',
+    'iat': 1516239022,
+    'exp': 1516242622
+}
+
+sanitized_payload = security.sanitize_jwt_payload(raw_payload)
+# sensitive fields like 'ssn', 'email', 'name' are redacted
+print(sanitized_payload)
+# Output: {'sub': '[REDACTED]', 'name': '[REDACTED]', 'email': '[REDACTED]', 'ssn': '[REDACTED]', 'iat': 1516239022, 'exp': 1516242622}
+```
+
+#### Resource Usage Monitoring
+
+```python
+# Get current resource usage statistics
+stats = security.get_resource_usage_stats()
+print(f"Active requests: {stats['active_requests']}")
+print(f"Max concurrent requests: {stats['max_concurrent_requests']}")
+print(f"Active clients: {stats['active_clients']}")
+print(f"Total requests in window: {stats['total_requests_in_window']}")
+print(f"Max request rate: {stats['max_request_rate']}")
+```
+
+#### Security State Management
+
+```python
+# Check if security features are enabled
+if security.is_security_enabled():
+    print("Security features are active")
+else:
+    print("Security features are disabled")
+
+# Clean up expired entries
+security.cleanup_expired_entries()
+```
+
+#### Complete Security Workflow Example
+
+```python
+from agentauth.security.framework import SecurityFramework
+from agentauth.config.security_config import SecurityConfig
+from agentauth.core.client import OAuth2OIDCClient
+from agentauth.config.client_config import ClientConfig
+
+# 1. Create security configuration
+security_config = SecurityConfig(
+    enable_security=True,
+    max_token_length=8192,
+    max_response_size=1024*1024,
+    audit_log_file="/var/log/security.log"
+)
+
+# 2. Initialize security framework
+security = SecurityFramework(security_config)
+
+# 3. Create client configuration
+client_config = ClientConfig(
+    idp_name="Secure IdP",
+    idp_endpoint="https://secure-idp.example.com",
+    client_id="secure-client-id",
+    client_secret="secure-client-secret",
+    security=security_config
+)
+
+# 4. Initialize client
+client = OAuth2OIDCClient(client_config)
+
+# 5. Perform secure operations
+try:
+    # Acquire resource slot
+    security.acquire_resource_slot('secure-client-id')
+    
+    # Validate input
+    sanitized_token = security.validate_input('token', raw_token)
+    
+    # Authenticate
+    access_token = client.authenticate()
+    
+    # Log successful authentication
+    security.log_security_event('authentication_success', {
+        'client_id': 'secure-client-id',
+        'token_hash': hashlib.sha256(access_token.encode()).hexdigest()
+    }, 'INFO')
+    
+    # Validate token
+    payload = client.validate_token(access_token)
+    
+    # Sanitize payload for logging
+    sanitized_payload = security.sanitize_jwt_payload(payload)
+    
+    # Log token validation
+    security.log_security_event('token_validation_success', {
+        'token_hash': hashlib.sha256(access_token.encode()).hexdigest(),
+        'payload_claims': sanitized_payload
+    }, 'INFO')
+    
+except Exception as e:
+    # Handle errors securely
+    error_id = security.handle_error(e, 'authentication_workflow')
+    security.log_security_event('authentication_failure', {
+        'client_id': 'secure-client-id',
+        'error_id': error_id
+    }, 'ERROR')
+    
+finally:
+    # Always release resource slot
+    security.release_resource_slot()
+
+# 6. Get security statistics
+stats = security.get_resource_usage_stats()
+print(f"Security workflow completed. Active requests: {stats['active_requests']}")
+```
+
+#### Security Framework Configuration
+
+```python
+from agentauth.config.security_config import SecurityBuilder
+
+# High-security configuration
+high_security_config = (SecurityBuilder()
+    .with_security_enabled(True)
+    .with_input_limits(max_token_length=4096, max_url_length=1024)
+    .with_resource_limits(max_response_size=512*1024, max_processing_time=15)
+    .with_audit_logging(audit_log_file="/var/log/security.log", enable_debug=False)
+    .with_rate_limiting(rate_limit_per_minute=1000)
+    .with_tls_settings(min_tls_version="TLSv1.3", verify_ssl=True)
+    .build())
+
+# Development configuration
+dev_security_config = (SecurityBuilder()
+    .with_security_enabled(True)
+    .with_input_limits(max_token_length=8192, max_url_length=2048)
+    .with_resource_limits(max_response_size=1024*1024, max_processing_time=30)
+    .with_audit_logging(audit_log_file=None, enable_debug=True)
+    .with_rate_limiting(rate_limit_per_minute=5000)
+    .with_tls_settings(min_tls_version="TLSv1.2", verify_ssl=True)
+    .build())
+
+# Initialize frameworks with different configurations
+high_security_framework = SecurityFramework(high_security_config)
+dev_security_framework = SecurityFramework(dev_security_config)
+```
 
 ### 1. Security Enabled by Default
 

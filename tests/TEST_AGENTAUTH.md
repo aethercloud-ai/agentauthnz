@@ -6,7 +6,7 @@ This document provides comprehensive documentation for the AgentAuth OAuth2/OIDC
 
 - **Total Source Files**: 16 Python files
 - **Total Test Files**: 5 Python files
-- **Total Test Methods**: 151 test methods
+- **Total Test Methods**: 151 test methods (92 + 52 + 7 = 151)
 - **Test Categories**: 4 comprehensive test files
 - **Mock Coverage**: Complete HTTP request mocking
 - **Security Testing**: Comprehensive security component testing
@@ -17,10 +17,10 @@ This document provides comprehensive documentation for the AgentAuth OAuth2/OIDC
 
 | File | Purpose | Test Classes | Test Methods | Lines |
 |------|---------|--------------|--------------|-------|
-| `test_agentauth.py` | Core OAuth2/OIDC functionality | 11 classes | 52 methods | 1,244 lines |
-| `test_agentauth_security.py` | Security components | 15 classes | 92 methods | 1,475 lines |
-| `test_sensitive_data_protection.py` | Sensitive data protection | 1 class | 7 methods | 175 lines |
-| `test_config.py` | Test configuration and utilities | 2 classes | 0 methods | 244 lines |
+| `test_agentauth.py` | Core OAuth2/OIDC functionality | 11 classes | 52 methods | 1,333 lines |
+| `test_agentauth_security.py` | Security components | 15 classes | 92 methods | 1,644 lines |
+| `test_sensitive_data_protection.py` | Sensitive data protection | 1 class | 7 methods | 195 lines |
+| `test_config.py` | Test configuration and utilities | 2 classes | 0 methods | 256 lines |
 | `run_tests.py` | Test runner and reporting | 1 class | 0 methods | 327 lines |
 
 ## 🔧 Environment Variable Configuration
