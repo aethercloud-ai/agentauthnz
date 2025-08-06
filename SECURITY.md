@@ -1,5 +1,7 @@
 # AgentAuth Security Guide
 
+> **📝 Documentation Note**: This document uses `https://test.issuer.com` as a dummy URL for examples only. For actual testing, you must set the `AGENTAUTH_TEST_IDP_BASE_URL` environment variable to your real Identity Provider endpoint. See the [README.md](README.md) for required environment variable configuration.
+
 ## Overview
 
 This document outlines the security enhancements implemented in the AgentAuth library to protect sensitive data and prevent common attack vectors.
@@ -21,6 +23,8 @@ This document outlines the security enhancements implemented in the AgentAuth li
   from agentauth.config.security_config import SecurityBuilder
   
   # Create client with security enabled
+  # Note: https://test.issuer.com is used as a dummy URL for documentation purposes only.
+  # In actual tests, use the AGENTAUTH_TEST_IDP_BASE_URL environment variable.
   security_config = SecurityBuilder().with_security_enabled(True).build()
   client_config = ClientBuilder().with_idp("Test IdP", "https://test.issuer.com").with_credentials("client-id", "client-secret").with_security(security_config).build()
   client = OAuth2OIDCClient(client_config)
@@ -289,7 +293,9 @@ from agentauth.config.security_config import SecurityBuilder
 security_config = SecurityBuilder().with_security_enabled(True).build()
 
 # Create client configuration
-client_config = ClientBuilder().with_idp("Google Cloud IAM", "https://accounts.google.com").with_credentials("your-client-id", "your-client-secret").with_security(security_config).build()
+  # Environment variables can override these settings (e.g., AGENTAUTH_IDP_BASE_URL)
+  # Note: https://your-idp.example.com is a placeholder - use your actual IdP URL
+  client_config = ClientBuilder().with_idp("Your Identity Provider", "https://your-idp.example.com").with_credentials("your-client-id", "your-client-secret").with_security(security_config).build()
 
 # Initialize client with security enabled
 client = OAuth2OIDCClient(client_config)
@@ -484,7 +490,7 @@ payload = security.validate_token_secure(
     token=access_token,
     jwks=jwks,
     audience='api.example.com',
-    issuer='https://accounts.google.com'
+    issuer='https://your-idp.example.com'
 )
 ```
 
@@ -729,19 +735,57 @@ nonce = "static_nonce"  # Predictable
 
 ### Environment Variables
 
+#### Core Security Variables
 ```bash
-# Enable security features
-export AGENTAUTH_DISABLE_SECURITY=false
+# Security framework control
+export AGENTAUTH_DISABLE_SECURITY=false  # Enable security features (default: false)
 
-# Certificate chain for authentication
-export AGENTAUTH_CERT_CHAIN=/path/to/certificate-chain.pem
+# TLS/SSL configuration
+export AGENTAUTH_MIN_TLS_VERSION=TLSv1.3  # Minimum TLS version (default: TLSv1.2)
+export AGENTAUTH_VERIFY_SSL=true          # Enable SSL certificate verification (default: true)
+export AGENTAUTH_CERT_CHAIN=/path/to/certificate-chain.pem  # Certificate chain file
 
-# Rate limiting configuration
-export AGENTAUTH_RATE_LIMIT_PER_MINUTE=3000
+# Rate limiting and resource protection
+export AGENTAUTH_RATE_LIMIT_PER_MINUTE=3000     # Max requests per minute (default: 3000)
+export AGENTAUTH_MAX_RESPONSE_SIZE=1048576      # Max response size in bytes (default: 1MB)
+export AGENTAUTH_MAX_PROCESSING_TIME=30         # Max processing time in seconds (default: 30)
+export AGENTAUTH_MAX_CONCURRENT_REQUESTS=10     # Max concurrent requests (default: 10)
+```
 
+#### Audit and Logging Variables
+```bash
+# Security audit logging
+export AGENTAUTH_AUDIT_LOG_FILE=/var/log/agentauth-audit.log  # Audit log file path
+export AGENTAUTH_ENABLE_DEBUG=false  # Enable debug mode for security components
+
+# Error handling and logging
+export AGENTAUTH_SANITIZE_ERROR_MESSAGES=true    # Sanitize error messages (default: true)
+export AGENTAUTH_LOG_ERROR_DETAILS=true          # Log detailed error information (default: true)
+export AGENTAUTH_ERROR_LOG_FILE=/var/log/agentauth-errors.log  # Error log file path
+export AGENTAUTH_GENERATE_ERROR_IDS=true         # Generate unique error IDs (default: true)
+export AGENTAUTH_REPORT_SECURITY_VIOLATIONS=true # Report security violations (default: true)
+```
+
+#### Testing Variables
+```bash
+# Required for all tests - IdP independent
+export AGENTAUTH_TEST_IDP_BASE_URL="https://your-idp.example.com"
+
+# Required for real OAuth2 authentication tests - IdP independent
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-oauth2-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-oauth2-client-secret"
+```
+
+#### Important Notes
+```bash
 # Token TTL configuration
 # AGENTAUTH_TOKEN_TTL removed - token TTL is managed per token via 'exp' claim
 # All tokens must have an 'exp' claim - tokens without expiration are rejected
+
+# Production vs Testing
+# Use AGENTAUTH_* variables for production
+# Use AGENTAUTH_TEST_* variables for testing (all three are IdP independent)
+# Tests will emit clear error messages if required test variables are not set
 ```
 
 ### Configuration File
@@ -917,22 +961,36 @@ def test_security_hardening():
 
 ### 3. Transport Security Testing
 
+**Note:** These examples use the `AGENTAUTH_TEST_IDP_BASE_URL` environment variable. Set it to your test IdP endpoint:
+
+```bash
+export AGENTAUTH_TEST_IDP_BASE_URL='https://your-idp.example.com'
+```
+
 ```python
 # Test transport security features
 def test_transport_security():
+    import os
     from agentauth import SecureHTTPClient, verify_tls_version
     
-    # Test TLS 1.3 preference
+    # Get test endpoint from environment
+    base_url = os.getenv("AGENTAUTH_TEST_IDP_BASE_URL")
+    if not base_url:
+        raise ValueError("AGENTAUTH_TEST_IDP_BASE_URL environment variable is required")
+    
+    # Test TLS 1.3 preference using OIDC discovery endpoint
     http_client = SecureHTTPClient(timeout=10, verify_ssl=True)
-    response = http_client.get("https://httpbin.org/get")
+    response = http_client.get(f"{base_url}/.well-known/openid-configuration")
     
     # Verify TLS version
     if verify_tls_version(response):
         print("✅ TLS 1.3 preferred, TLS 1.2 fallback working")
     
-    # Test HTTPS enforcement
+    # Test HTTPS enforcement by attempting HTTP request
     try:
-        http_client.get("http://httpbin.org/get")
+        # Construct HTTP (insecure) URL from HTTPS base URL
+        insecure_url = base_url.replace("https://", "http://")
+        http_client.get(f"{insecure_url}/.well-known/openid-configuration")
         assert False, "HTTP request should be rejected"
     except SecurityError:
         print("✅ HTTPS enforcement working")

@@ -72,6 +72,9 @@ class SecureHTTPAdapter(HTTPAdapter):
             ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
         )
         
+        # Load default CA certificates for certificate verification
+        context.load_default_certs()
+        
         kwargs['ssl_context'] = context
         return super().init_poolmanager(*args, **kwargs)
     
@@ -94,6 +97,9 @@ class SecureHTTPAdapter(HTTPAdapter):
         context.options |= (
             ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
         )
+        
+        # Load default CA certificates for certificate verification
+        context.load_default_certs()
         
         proxy_kwargs['ssl_context'] = context
         return super().proxy_manager_for(proxy, **proxy_kwargs)

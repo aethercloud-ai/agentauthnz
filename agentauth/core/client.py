@@ -84,7 +84,7 @@ class OAuth2OIDCClient:
         are secured with TLS 1.3 preferred, TLS 1.2 fallback.
         """
         try:
-            well_known_url = f"{self.idp_endpoint}/.well-known/openid_configuration"
+            well_known_url = f"{self.idp_endpoint}/.well-known/openid-configuration"
             logger.info(f"Discovering OIDC configuration from {well_known_url}")
             
             # Use secure HTTP client with TLS 1.3 preferred, TLS 1.2 fallback

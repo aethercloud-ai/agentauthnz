@@ -25,39 +25,64 @@ This document provides comprehensive documentation for the AgentAuth OAuth2/OIDC
 
 ## 🔧 Environment Variable Configuration
 
-The test suite supports configurable Identity Provider (IdP) endpoints through environment variables:
+The test suite supports configurable Identity Provider (IdP) endpoints and OAuth2 credentials through environment variables. All test variables are IdP independent.
 
-### AGENTAUTH_IDP_BASE_URL
+### Required Environment Variables
 
-This environment variable allows you to configure the base URL for all IdP endpoints used in tests.
+#### 1. AGENTAUTH_TEST_IDP_BASE_URL
+**⚠️ REQUIRED for all tests**: This environment variable MUST be set for tests to run. There is no default value.
 
-**Default Value**: `https://test.issuer.com`
+**Purpose**: Configures the base URL for all IdP endpoints used in tests.
 
-**Usage Examples**:
+#### 2. AGENTAUTH_TEST_IDP_CLIENT_ID
+**⚠️ REQUIRED for real authentication tests**: OAuth2 client ID for real authentication testing.
+
+**Purpose**: Provides OAuth2 client ID for tests that perform real authentication against the IdP.
+
+#### 3. AGENTAUTH_TEST_IDP_CLIENT_SECRET
+**⚠️ REQUIRED for real authentication tests**: OAuth2 client secret for real authentication testing.
+
+**Purpose**: Provides OAuth2 client secret for tests that perform real authentication against the IdP.
+
+### Complete Configuration Examples
 
 ```bash
-# Use default test issuer
-export AGENTAUTH_IDP_BASE_URL="https://test.issuer.com"
+# Example 1: Okta Preview environment
+export AGENTAUTH_TEST_IDP_BASE_URL="https://yourcompany.okta.com"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-okta-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-okta-client-secret"
 
-# Use Okta Preview environment
-export AGENTAUTH_IDP_BASE_URL="https://yourcompany.oktapreview.com"
+# Example 2: Auth0
+export AGENTAUTH_TEST_IDP_BASE_URL="https://yourcompany.auth0.com"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-auth0-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-auth0-client-secret"
 
-# Use Auth0
-export AGENTAUTH_IDP_BASE_URL="https://yourcompany.auth0.com"
+# Example 3: Azure AD
+export AGENTAUTH_TEST_IDP_BASE_URL="https://login.microsoftonline.com/your-tenant-id"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-azure-application-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-azure-client-secret"
 
-# Use Azure AD
-export AGENTAUTH_IDP_BASE_URL="https://login.microsoftonline.com/your-tenant-id"
+# Example 4: Google Cloud IAM
+export AGENTAUTH_TEST_IDP_BASE_URL="https://accounts.google.com"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-google-oauth2-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-google-client-secret"
 ```
+
+**⚠️ Important**: 
+- Tests will fail with clear error messages if required variables are not set
+- All three variables are IdP independent and work with any OAuth2/OIDC provider
+- Basic tests require only `AGENTAUTH_TEST_IDP_BASE_URL`
+- Real authentication tests require all three variables
 
 **Dynamic Endpoint Construction**:
 
-When `AGENTAUTH_IDP_BASE_URL` is set, the following endpoints are automatically constructed:
+When `AGENTAUTH_TEST_IDP_BASE_URL` is set, the following endpoints are automatically constructed:
 
-- **Issuer**: `$AGENTAUTH_IDP_BASE_URL`
-- **Token Endpoint**: `$AGENTAUTH_IDP_BASE_URL/oauth2/token`
-- **Authorization Endpoint**: `$AGENTAUTH_IDP_BASE_URL/oauth2/authorize`
-- **JWKS Endpoint**: `$AGENTAUTH_IDP_BASE_URL/.well-known/jwks.json`
-- **Userinfo Endpoint**: `$AGENTAUTH_IDP_BASE_URL/oauth2/userinfo`
+- **Issuer**: `$AGENTAUTH_TEST_IDP_BASE_URL`
+- **Token Endpoint**: `$AGENTAUTH_TEST_IDP_BASE_URL/oauth2/token`
+- **Authorization Endpoint**: `$AGENTAUTH_TEST_IDP_BASE_URL/oauth2/authorize`
+- **JWKS Endpoint**: `$AGENTAUTH_TEST_IDP_BASE_URL/.well-known/jwks.json`
+- **Userinfo Endpoint**: `$AGENTAUTH_TEST_IDP_BASE_URL/oauth2/userinfo`
 
 ## 🧪 Test Classes and Methods
 
@@ -538,14 +563,14 @@ def test_example(self, mock_verify_tls, mock_http_client_class):
 The tests use comprehensive mock data with configurable IdP base URL:
 
 ```python
-# Mock OIDC configuration - uses AGENTAUTH_IDP_BASE_URL environment variable
-# Default: https://test.issuer.com
-# Example with custom IdP: export AGENTAUTH_IDP_BASE_URL="https://yourcompany.oktapreview.com"
+# Mock OIDC configuration - uses AGENTAUTH_TEST_IDP_BASE_URL environment variable
+# REQUIRED: export AGENTAUTH_TEST_IDP_BASE_URL="https://yourcompany.okta.com"
+# Note: https://test.issuer.com shown in examples is a dummy URL for documentation only
 self.mock_oidc_config = {
-    "issuer": "$AGENTAUTH_IDP_BASE_URL",
-    "token_endpoint": "$AGENTAUTH_IDP_BASE_URL/oauth2/token",
-    "jwks_uri": "$AGENTAUTH_IDP_BASE_URL/.well-known/jwks.json",
-    "authorization_endpoint": "$AGENTAUTH_IDP_BASE_URL/oauth2/authorize"
+    "issuer": "$AGENTAUTH_TEST_IDP_BASE_URL",
+    "token_endpoint": "$AGENTAUTH_TEST_IDP_BASE_URL/oauth2/token",
+    "jwks_uri": "$AGENTAUTH_TEST_IDP_BASE_URL/.well-known/jwks.json",
+    "authorization_endpoint": "$AGENTAUTH_TEST_IDP_BASE_URL/oauth2/authorize"
 }
 
 # Mock JWKS data

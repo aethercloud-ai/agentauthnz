@@ -36,8 +36,14 @@ from agentauth.utils.exceptions import SecurityError
 
 
 def get_test_idp_base_url():
-    """Get the test IdP base URL from environment variable or use default."""
-    return os.getenv("AGENTAUTH_IDP_BASE_URL", "https://test.issuer.com").rstrip('/')
+    """Get the test IdP base URL from environment variable or emit error if not set."""
+    base_url = os.getenv("AGENTAUTH_TEST_IDP_BASE_URL")
+    if not base_url:
+        print("ERROR: AGENTAUTH_TEST_IDP_BASE_URL environment variable is not set.")
+        print("Please set it to your IdP base URL, e.g.:")
+        print("  export AGENTAUTH_TEST_IDP_BASE_URL='https://your-idp.example.com'")
+        raise ValueError("AGENTAUTH_TEST_IDP_BASE_URL environment variable is required for tests")
+    return base_url.rstrip('/')
 
 
 class TestCryptographicAuthenticator(unittest.TestCase):
@@ -172,8 +178,11 @@ class TestInputSanitizer(unittest.TestCase):
     
     def test_sanitize_url_valid(self):
         """Test sanitization of valid URL."""
+        # Get real JWKS URI from OIDC discovery - no hardcoded paths
+        from agentauth.core.discovery import discover_oidc_config
         base_url = get_test_idp_base_url()
-        url = f"{base_url}/.well-known/jwks.json"
+        oidc_config = discover_oidc_config(base_url)
+        url = oidc_config["jwks_uri"]  # Use real JWKS URI from IdP
         result = self.sanitizer.sanitize_url(url)
         self.assertEqual(result, url)
     
@@ -185,7 +194,7 @@ class TestInputSanitizer(unittest.TestCase):
     
     def test_sanitize_url_private_ip(self):
         """Test sanitization of URL with private IP."""
-        url = "https://192.168.1.1/.well-known/jwks.json"
+        url = "https://192.168.1.1/.well-known/openid-configuration"  # Use standard OIDC path, not Google-specific
         with self.assertRaises(SecurityError):
             self.sanitizer.sanitize_url(url)
     
@@ -249,29 +258,29 @@ class TestInputSanitizer(unittest.TestCase):
     
     def test_is_ssrf_vulnerable(self):
         """Test SSRF vulnerability detection in URLs."""
-        # Test safe URLs
+        # Test safe URLs - use standard OIDC paths, not IdP-specific
         safe_urls = [
-            "https://api.example.com/oauth2/token",
-            "https://auth.google.com/.well-known/openid_configuration",
-            "https://login.microsoftonline.com/common/v2.0/.well-known/openid_configuration"
+            "https://api.example.com/.well-known/openid-configuration",
+            "https://auth.example.com/.well-known/openid-configuration", 
+            "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration"
         ]
         
         for url in safe_urls:
             result = self.sanitizer._is_ssrf_vulnerable(url)
             self.assertFalse(result, f"Safe URL incorrectly flagged as SSRF vulnerable: {url}")
         
-        # Test SSRF vulnerable URLs
+        # Test SSRF vulnerable URLs - use standard paths, not IdP-specific
         vulnerable_urls = [
-            "https://localhost/oauth2/token",
-            "https://127.0.0.1/.well-known/openid_configuration",
-            "https://0.0.0.0/oauth2/token",
+            "https://localhost/.well-known/openid-configuration",
+            "https://127.0.0.1/.well-known/openid-configuration",
+            "https://0.0.0.0/.well-known/openid-configuration",
             "https://169.254.169.254/latest/meta-data/",
             "https://169.254.170.2/$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
-            "https://10.0.0.1/oauth2/token",
-            "https://172.16.0.1/.well-known/openid_configuration",
-            "https://192.168.1.1/oauth2/token",
-            "https://malicious.com.localhost/oauth2/token",
-            "https://evil.com.127.0.0.1/oauth2/token"
+            "https://10.0.0.1/.well-known/openid-configuration",
+            "https://172.16.0.1/.well-known/openid-configuration",
+            "https://192.168.1.1/.well-known/openid-configuration",
+            "https://malicious.com.localhost/.well-known/openid-configuration",
+            "https://evil.com.127.0.0.1/.well-known/openid-configuration"
         ]
         
         for url in vulnerable_urls:
@@ -672,6 +681,10 @@ class TestSecureHTTPClient(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.client = SecureHTTPClient()
+        # Get real OIDC configuration once for all tests to avoid conflicts with mocking
+        from agentauth.core.discovery import discover_oidc_config
+        base_url = get_test_idp_base_url()
+        self.oidc_config = discover_oidc_config(base_url)
     
     def test_init(self):
         """Test initialization."""
@@ -686,8 +699,8 @@ class TestSecureHTTPClient(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
         
-        base_url = get_test_idp_base_url()
-        response = self.client.get(f"{base_url}/.well-known/jwks.json")
+        # Use real JWKS URI from OIDC discovery - no hardcoded paths
+        response = self.client.get(self.oidc_config["jwks_uri"])
         
         self.assertEqual(response.json(), {"test": "data"})
         mock_get.assert_called_once()
@@ -701,8 +714,8 @@ class TestSecureHTTPClient(unittest.TestCase):
         mock_post.return_value = mock_response
         
         data = {"grant_type": "client_credentials"}
-        base_url = get_test_idp_base_url()
-        response = self.client.post(f"{base_url}/oauth2/token", data=data)
+        # Use real token endpoint from OIDC discovery - no hardcoded paths
+        response = self.client.post(self.oidc_config["token_endpoint"], data=data)
         
         self.assertEqual(response.json(), {"access_token": "test-token"})
         mock_post.assert_called_once()

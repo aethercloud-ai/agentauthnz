@@ -29,7 +29,7 @@ def discover_oidc_config(idp_endpoint: str, timeout: int = 30) -> Dict:
         SecurityError: If security validation fails
     """
     try:
-        well_known_url = f"{idp_endpoint.rstrip('/')}/.well-known/openid_configuration"
+        well_known_url = f"{idp_endpoint.rstrip('/')}/.well-known/openid-configuration"
         logger.info(f"Discovering OIDC configuration from {well_known_url}")
         
         # Use secure HTTP client

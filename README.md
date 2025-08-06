@@ -34,6 +34,58 @@ cd agentauth
 pip install -e ".[dev]"
 ```
 
+## ⚠️ Required Environment Variables for Testing
+
+**IMPORTANT**: Before running tests, you must set the following environment variables:
+
+### Basic Testing (Required for all tests)
+```bash
+# Required for all tests - set to your actual IdP base URL
+export AGENTAUTH_TEST_IDP_BASE_URL="https://your-idp.example.com"
+```
+
+### Real OAuth2 Authentication Testing (Required for authentication tests)
+```bash
+# Required for real OAuth2 authentication tests
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-oauth2-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-oauth2-client-secret"
+```
+
+**Complete test environment setup:**
+
+```bash
+# Set all three test-specific variables (these are IdP independent)
+export AGENTAUTH_TEST_IDP_BASE_URL="https://your-idp.example.com"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-oauth2-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-oauth2-client-secret"
+```
+
+**Example configurations for different IdPs:**
+
+```bash
+# For Auth0
+export AGENTAUTH_TEST_IDP_BASE_URL="https://yourcompany.auth0.com"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-auth0-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-auth0-client-secret"
+
+# For Azure AD  
+export AGENTAUTH_TEST_IDP_BASE_URL="https://login.microsoftonline.com/your-tenant-id"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-azure-application-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-azure-client-secret"
+
+# For Okta
+export AGENTAUTH_TEST_IDP_BASE_URL="https://yourcompany.okta.com"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-okta-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-okta-client-secret"
+
+# For Google Cloud IAM (see dedicated Google example section)
+export AGENTAUTH_TEST_IDP_BASE_URL="https://accounts.google.com"
+export AGENTAUTH_TEST_IDP_CLIENT_ID="your-google-oauth2-client-id"
+export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-google-client-secret"
+```
+
+> **📝 Note**: These are test-specific variables that are IdP independent. The documentation uses placeholder URLs (`https://test.issuer.com`, `https://your-idp.example.com`) for examples only. In production, set the `AGENTAUTH_IDP_BASE_URL` environment variable to your actual IdP endpoint. For testing, set all three `AGENTAUTH_TEST_*` variables to your real IdP credentials.
+
 ## Quick Start
 
 ### Basic Usage
@@ -51,10 +103,12 @@ security_config = (SecurityBuilder()
                   .build())
 
 # Create client configuration
+# Note: https://your-idp.example.com is a placeholder - use your actual IdP URL
+# In production, set AGENTAUTH_IDP_BASE_URL environment variable to override
 client_config = (ClientBuilder()
-                .with_idp("Google Cloud IAM", "https://accounts.google.com")
+                .with_idp("Your Identity Provider", "https://your-idp.example.com")
                 .with_credentials("your-client-id", "your-client-secret")
-                .with_scope("https://www.googleapis.com/auth/cloud-platform")
+                .with_scope("your-required-scope")
                 .with_timeout(30)
                 .with_security(security_config)
                 .build())
@@ -69,14 +123,35 @@ access_token = client.authenticate()
 payload = client.validate_token(
     token=access_token,
     audience="your-client-id",
-    issuer="https://accounts.google.com"
+    issuer="https://your-idp.example.com"
 )
 ```
 
 ## Environment Variables
 
-The AgentAuth library uses several environment variables for configuration. All variables are optional and have secure defaults.
+The AgentAuth library uses several environment variables for configuration.
 
+### Required for Testing
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AGENTAUTH_TEST_IDP_BASE_URL` | **Yes** | None | Base URL of your Identity Provider (required for all tests) |
+| `AGENTAUTH_TEST_IDP_CLIENT_ID` | **Yes*** | None | OAuth2 client ID for real authentication tests (IdP independent) |
+| `AGENTAUTH_TEST_IDP_CLIENT_SECRET` | **Yes*** | None | OAuth2 client secret for real authentication tests (IdP independent) |
+
+*Required only for tests that perform real OAuth2 authentication.
+
+### Production Configuration Variables
+
+#### Core Configuration
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AGENTAUTH_IDP_BASE_URL` | No | None | Base URL of your Identity Provider (overrides ClientConfig.idp_endpoint in production) |
+| `AGENTAUTH_TIMEOUT` | No | `30` | HTTP request timeout in seconds (overrides ClientConfig.timeout) |
+| `AGENTAUTH_JWKS_CACHE_TTL` | No | `3600` | JWKS cache time-to-live in seconds (overrides ClientConfig.jwks_cache_ttl) |
+| `AGENTAUTH_CERT_CHAIN` | No | None | Path to certificate chain file (overrides ClientConfig.cert_chain) |
+
+#### Security Configuration
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AGENTAUTH_DISABLE_SECURITY` | No | `false` | Disable security features (set to `true` to disable) |
@@ -88,6 +163,15 @@ The AgentAuth library uses several environment variables for configuration. All 
 | `AGENTAUTH_MAX_CONCURRENT_REQUESTS` | No | `10` | Maximum concurrent requests |
 | `AGENTAUTH_AUDIT_LOG_FILE` | No | `None` | Path to audit log file |
 | `AGENTAUTH_ENABLE_DEBUG` | No | `false` | Enable debug mode for security components |
+
+#### Error Handling Configuration
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AGENTAUTH_SANITIZE_ERROR_MESSAGES` | No | `true` | Sanitize error messages to prevent information disclosure |
+| `AGENTAUTH_LOG_ERROR_DETAILS` | No | `true` | Log detailed error information |
+| `AGENTAUTH_ERROR_LOG_FILE` | No | None | Path to error log file |
+| `AGENTAUTH_GENERATE_ERROR_IDS` | No | `true` | Generate unique error IDs for correlation |
+| `AGENTAUTH_REPORT_SECURITY_VIOLATIONS` | No | `true` | Report security violations to audit log |
 | `GOOGLE_CLOUD_CLIENT_ID` | No* | None | Google Cloud OAuth2 client ID (for Google Cloud examples) |
 | `GOOGLE_CLOUD_CLIENT_SECRET` | No* | None | Google Cloud OAuth2 client secret (for Google Cloud examples) |
 | `GOOGLE_CLOUD_PROJECT` | No* | None | Google Cloud project ID (for Google Cloud examples) |
@@ -95,6 +179,61 @@ The AgentAuth library uses several environment variables for configuration. All 
 | `PYTHONPATH` | No | None | Python module search path (for troubleshooting) |
 
 *Required only when running Google Cloud IAM examples.
+
+### Environment Variable Override Behavior
+
+**Important**: Environment variables **override** values set in configuration objects. This allows for flexible deployment configuration without code changes.
+
+**Override Priority** (highest to lowest):
+1. **Environment Variables** (highest priority)
+2. Explicit constructor parameters
+3. Default values (lowest priority)
+
+**Example**:
+```python
+# Even if you specify a URL in code...
+# Note: https://hardcoded.example.com is a placeholder URL for documentation
+client_config = ClientBuilder().with_idp("My IdP", "https://hardcoded.example.com").build()
+
+# The environment variable will override it in production
+# export AGENTAUTH_IDP_BASE_URL="https://production.idp.com"
+# Result: client will use https://production.idp.com (not the hardcoded URL)
+```
+
+### Production vs Testing Environment Variables
+
+**For Production Applications**:
+- Use `AGENTAUTH_*` variables (without `TEST_` prefix)
+- Set `AGENTAUTH_IDP_BASE_URL` to override IdP endpoints
+- Configure security, timeouts, and logging variables as needed
+
+**For Testing**:
+- Use `AGENTAUTH_TEST_*` variables for all test configurations:
+  - `AGENTAUTH_TEST_IDP_BASE_URL` - Required for all tests
+  - `AGENTAUTH_TEST_IDP_CLIENT_ID` - Required for real authentication tests
+  - `AGENTAUTH_TEST_IDP_CLIENT_SECRET` - Required for real authentication tests
+- Tests will fail with clear error messages if required variables are not set
+- Test variables are completely separate from production variables
+- All test variables are IdP independent and work with any OAuth2/OIDC provider
+
+### Environment Variable Validation
+
+**Type Conversion**: Environment variables are automatically converted to appropriate types:
+- **Integer variables** (timeouts, cache TTL, limits): Invalid values will raise `ValueError`
+- **Boolean variables** (security flags): Accepts `"true"`/`"false"` (case-insensitive)
+- **String variables** (URLs, file paths): Used as-is after basic validation
+
+**Error Handling**: If an environment variable has an invalid value:
+```python
+# This will raise ValueError if AGENTAUTH_TIMEOUT is not a valid integer
+export AGENTAUTH_TIMEOUT="invalid"
+client_config = ClientBuilder().with_timeout(30).build()  # Fails during __post_init__()
+```
+
+**Best Practices**:
+- Test environment variable values before deployment
+- Use string values for numeric settings (e.g., `"30"` not `30`)
+- Verify boolean settings use `"true"` or `"false"` strings
 
 ### Security Configuration
 
@@ -253,58 +392,67 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
 Configuration class for OAuth2/OIDC client settings.
 
+**Environment Variable Override**: After initialization, `ClientConfig` automatically checks for environment variables and overrides any matching configuration values. This happens in the `__post_init__()` method.
+
 ```python
 from agentauth.config.client_config import ClientConfig
 
 config = ClientConfig(
-    idp_name="Google Cloud IAM",
-    idp_endpoint="https://accounts.google.com",
+    idp_name="Your Identity Provider",
+    idp_endpoint="https://your-idp.example.com",  # Overridden by AGENTAUTH_IDP_BASE_URL if set
     client_id="your-client-id",
     client_secret="your-client-secret",
-    scope="https://www.googleapis.com/auth/cloud-platform",
-    timeout=30,
-    jwks_cache_ttl=3600,
-    cert_chain="/path/to/certificate-chain.pem"
+    scope="your-required-scope",
+    timeout=30,  # Overridden by AGENTAUTH_TIMEOUT if set
+    jwks_cache_ttl=3600,  # Overridden by AGENTAUTH_JWKS_CACHE_TTL if set
+    cert_chain="/path/to/certificate-chain.pem"  # Overridden by AGENTAUTH_CERT_CHAIN if set
 )
+# Environment variables are automatically applied after initialization
 ```
 
 #### SecurityConfig Class
 
 Configuration class for security settings.
 
+**Environment Variable Override**: Like `ClientConfig`, `SecurityConfig` automatically applies environment variable overrides in `__post_init__()`.
+
 ```python
 from agentauth.config.security_config import SecurityConfig
 
 security_config = SecurityConfig(
-    enable_security=True,
+    enable_security=True,  # Overridden by AGENTAUTH_DISABLE_SECURITY (inverted logic)
     max_token_length=8192,
     max_url_length=2048,
-    max_response_size=1024*1024,
-    max_processing_time=30,
-    max_concurrent_requests=10,
-    rate_limit_per_minute=3000,
-    audit_log_file="/var/log/security.log",
-    enable_debug=False,
-    min_tls_version="TLSv1.2",
-    verify_ssl=True
+    max_response_size=1024*1024,  # Overridden by AGENTAUTH_MAX_RESPONSE_SIZE
+    max_processing_time=30,  # Overridden by AGENTAUTH_MAX_PROCESSING_TIME
+    max_concurrent_requests=10,  # Overridden by AGENTAUTH_MAX_CONCURRENT_REQUESTS
+    rate_limit_per_minute=3000,  # Overridden by AGENTAUTH_RATE_LIMIT_PER_MINUTE
+    audit_log_file="/var/log/security.log",  # Overridden by AGENTAUTH_AUDIT_LOG_FILE
+    enable_debug=False,  # Overridden by AGENTAUTH_ENABLE_DEBUG
+    min_tls_version="TLSv1.2",  # Overridden by AGENTAUTH_MIN_TLS_VERSION
+    verify_ssl=True  # Overridden by AGENTAUTH_VERIFY_SSL
 )
+# Environment variables are automatically applied after initialization
 ```
 
 #### ErrorConfig Class
 
 Configuration class for error handling settings.
 
+**Environment Variable Override**: `ErrorConfig` also supports environment variable overrides in `__post_init__()`.
+
 ```python
 from agentauth.config.error_config import ErrorConfig
 
 error_config = ErrorConfig(
-    enable_debug=False,
-    sanitize_error_messages=True,
-    log_error_details=True,
-    error_log_file="/var/log/errors.log",
-    generate_error_ids=True,
-    report_security_violations=True
+    enable_debug=False,  # Overridden by AGENTAUTH_ENABLE_DEBUG
+    sanitize_error_messages=True,  # Overridden by AGENTAUTH_SANITIZE_ERROR_MESSAGES
+    log_error_details=True,  # Overridden by AGENTAUTH_LOG_ERROR_DETAILS
+    error_log_file="/var/log/errors.log",  # Overridden by AGENTAUTH_ERROR_LOG_FILE
+    generate_error_ids=True,  # Overridden by AGENTAUTH_GENERATE_ERROR_IDS
+    report_security_violations=True  # Overridden by AGENTAUTH_REPORT_SECURITY_VIOLATIONS
 )
+# Environment variables are automatically applied after initialization
 ```
 
 ### Builder Pattern Classes
@@ -316,13 +464,15 @@ Builder pattern for creating ClientConfig instances.
 ```python
 from agentauth.config.client_config import ClientBuilder
 
+# Environment variables can override any of these settings  
+# Note: https://your-idp.example.com is a placeholder - use your actual IdP URL
 client_config = (ClientBuilder()
-    .with_idp("Google Cloud IAM", "https://accounts.google.com")
+    .with_idp("Your Identity Provider", "https://your-idp.example.com")  # Can be overridden by AGENTAUTH_IDP_BASE_URL
     .with_credentials("your-client-id", "your-client-secret")
-    .with_scope("https://www.googleapis.com/auth/cloud-platform")
-    .with_timeout(30)
-    .with_jwks_cache_ttl(3600)
-    .with_cert_chain("/path/to/certificate-chain.pem")
+    .with_scope("your-required-scope")
+    .with_timeout(30)  # Can be overridden by AGENTAUTH_TIMEOUT
+    .with_jwks_cache_ttl(3600)  # Can be overridden by AGENTAUTH_JWKS_CACHE_TTL
+    .with_cert_chain("/path/to/certificate-chain.pem")  # Can be overridden by AGENTAUTH_CERT_CHAIN
     .with_security(security_config)
     .build())
 ```
@@ -438,7 +588,7 @@ Validate a JWT token and return its payload.
 payload = client.validate_token(
     token=access_token,
     audience="your-client-id",
-    issuer="https://accounts.google.com"
+    issuer="https://your-idp.example.com"
 )
 print(f"Token subject: {payload.get('sub')}")
 ```
@@ -465,7 +615,7 @@ tokens = [
 results = client.validate_multiple_tokens(
     tokens=tokens,
     audience="your-client-id",
-    issuer="https://accounts.google.com"
+    issuer="https://your-idp.example.com"
 )
 
 for result in results:
@@ -509,7 +659,7 @@ Discover OIDC configuration from an IdP endpoint.
 ```python
 from agentauth.core.discovery import discover_oidc_config
 
-config = discover_oidc_config("https://accounts.google.com")
+config = discover_oidc_config("https://your-idp.example.com")
 print(f"Token endpoint: {config.get('token_endpoint')}")
 print(f"JWKS URI: {config.get('jwks_uri')}")
 ```
@@ -529,7 +679,7 @@ Retrieve JWKS from a specified URI.
 ```python
 from agentauth.core.discovery import retrieve_jwks
 
-jwks = retrieve_jwks("https://www.googleapis.com/oauth2/v1/certs")
+jwks = retrieve_jwks("https://your-idp.example.com/.well-known/jwks.json")
 print(f"Retrieved {len(jwks.get('keys', []))} keys")
 ```
 
@@ -554,7 +704,7 @@ payload = validate_token_signature(
     token=access_token,
     jwks=jwks,
     audience="your-client-id",
-    issuer="https://accounts.google.com"
+    issuer="https://your-idp.example.com"
 )
 ```
 
@@ -584,7 +734,7 @@ results = validate_multiple_token_signatures(
     tokens=tokens,
     jwks=jwks,
     audience="your-client-id",
-    issuer="https://accounts.google.com"
+    issuer="https://your-idp.example.com"
 )
 
 for result in results:
