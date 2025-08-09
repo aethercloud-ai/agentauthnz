@@ -595,57 +595,11 @@ self.valid_jwt_token = jwt.encode(payload, "test-secret", algorithm="HS256")
 
 ### Standard unittest Output
 
-```
-test_exception_creation (test_agentauth.TestOAuth2OIDCError) ... ok
-test_client_initialization_success (test_agentauth.TestOAuth2OIDCClient) ... ok
-test_authenticate_success (test_agentauth.TestOAuth2OIDCClient) ... ok
-...
-
-----------------------------------------------------------------------
-Ran 151 tests in 0.450s
-
-OK
-```
+When running tests with unittest, you will see output indicating the status of each test method. The framework provides detailed feedback on test execution.
 
 ### Comprehensive Test Runner Output
 
-```
-============================================================
-AgentAuth Comprehensive Test Suite
-============================================================
-
-Running Core Library Tests...
-test_exception_creation (test_agentauth.TestOAuth2OIDCError) ... ok
-test_client_initialization_success (test_agentauth.TestOAuth2OIDCClient) ... ok
-test_authenticate_success (test_agentauth.TestOAuth2OIDCClient) ... ok
-...
-
-Running Security Components Tests...
-test_init_default (test_agentauth_security.TestCryptographicAuthenticator) ... ok
-test_generate_hmac_token (test_agentauth_security.TestCryptographicAuthenticator) ... ok
-test_verify_hmac_token_valid (test_agentauth_security.TestCryptographicAuthenticator) ... ok
-...
-
-Running Sensitive Data Protection Tests...
-test_jwt_payload_sanitization (test_sensitive_data_protection.TestSensitiveDataProtection) ... ok
-test_token_hashing (test_sensitive_data_protection.TestSensitiveDataProtection) ... ok
-...
-
-============================================================
-Test Summary
-============================================================
-Core Library Tests: 52/52 passed
-Security Components Tests: 92/92 passed
-Sensitive Data Protection Tests: 7/7 passed
-Total Tests: 151/151 passed
-Success Rate: 100%
-
-Coverage Summary:
-- OAuth2OIDCClient: 100%
-- Security Components: 100%
-- Sensitive Data Protection: 100%
-- Error Handling: 100%
-```
+The comprehensive test runner provides organized output with sections for different test categories, summary statistics, and coverage information.
 
 ## 🛠️ Test Dependencies
 

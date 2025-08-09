@@ -850,22 +850,7 @@ SECURITY_CONFIG = {
 
 ### 🧪 Sensitive Data Protection Testing
 
-All sensitive data protection features are thoroughly tested:
-
-```bash
-$ python -m unittest tests.test_sensitive_data_protection -v
-test_audit_log_summary ... ok
-test_custom_sensitive_fields ... ok
-test_input_sanitization ... ok
-test_jwt_payload_access_logging ... ok
-test_jwt_payload_sanitization ... ok
-test_secure_error_handling ... ok
-test_token_hashing ... ok
-
-----------------------------------------------------------------------
-Ran 7 tests in 0.002s
-OK
-```
+All sensitive data protection features are thoroughly tested with comprehensive test coverage.
 
 **Test Coverage**:
 - ✅ JWT payload sanitization
@@ -1256,60 +1241,14 @@ python examples/security_example.py
 
 #### Example Output
 
-```
-AgentAuth Security Features Demonstration
-============================================================
-
-=== Simple Dictionary Storage Example ===
-✅ Stored token hash: 8baaba4eea3332ad80fbb494f00ee5bd79ebf51af0fd4589708bf13ab820a21b
-✅ Retrieved token hash: 8baaba4eea3332ad80fbb494f00ee5bd79ebf51af0fd4589708bf13ab820a21b
-✅ Retrieved JWKS keys: 1
-✅ After deletion: True
-✅ After clear: True
-
-=== Cryptographic Authentication Example ===
-✅ Generated auth token hash: 2cfbbf7d133a69ec28a7e3d11aaf84e91722d49c54978a4990d1d1a81646ef9f
-✅ Token verification: True
-✅ Wrong client ID rejected: True
-✅ Request 1 allowed: True
-✅ Request 2 allowed: True
-✅ Request 3 allowed: True
-✅ Request 4 allowed: True
-✅ Request 5 allowed: True
-✅ Nonce verification: True
-✅ Replay protection: True
-
-=== Enhanced Token Validation Example ===
-⚠️ Security check failed: Token validation failed: Invalid token header
-
-=== Secure Client Usage Example ===
-INFO:agentauth.security.framework:Security framework initialized
-✅ Authentication successful: [token_hash]
-✅ Token validation successful: [payload_hash]
-
-=== Cryptographic Parameter Validation Example ===
-✅ Secure RSA key: True
-✅ Secure EC key: True
-❌ Insecure RSA key: False
-❌ Insecure EC key: False
-
-=== Secure Memory Management Example ===
-✅ Original data: b'very-secret-token-data-that-must-be-protected'
-✅ After secure wipe: b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00...'
-
-=== Security Best Practices Example ===
-✅ 1. Security features enabled by default
-✅ 2. Authentication token hash: [hash]
-✅ 3. Rate limit check 1: True
-✅ 3. Rate limit check 2: True
-✅ 3. Rate limit check 3: True
-✅ 4. Cryptographic validation: True
-✅ 5. Secure nonces generated: [hash1] and [hash2]
-✅ 5. Nonces are different: True
-
-============================================================
-✅ All security examples completed successfully!
-🔒 Security features are working correctly.
-```
+The security example provides comprehensive output demonstrating all security features working together, including:
+- Simple dictionary storage operations
+- Cryptographic authentication and verification
+- Rate limiting and replay protection
+- Enhanced token validation
+- Secure client usage workflows
+- Cryptographic parameter validation
+- Secure memory management
+- Security best practices implementation
 
 This example demonstrates all the security features working together to provide comprehensive protection for OAuth2/OIDC authentication workflows. 
