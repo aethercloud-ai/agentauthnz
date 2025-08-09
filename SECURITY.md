@@ -905,7 +905,7 @@ SECURITY_CONFIG = {
 }
 ```
 
-## 🚨 Security Considerations
+## Other Security Considerations
 
 ### 1. Key Management
 
