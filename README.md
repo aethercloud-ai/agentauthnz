@@ -4,7 +4,7 @@ A comprehensive Python library for OAuth2 and OpenID Connect (OIDC) authenticati
 
 AgentAuth provides **significantly superior security** compared to the standard Authlib library. While Authlib offers broader OAuth/OIDC functionality, AgentAuth delivers enterprise-grade security features that far exceed Authlib's basic security implementation, with the exception of memory encryption which was removed in favor of simple dictionary storage.
 
-## Features
+## ✨ Features
 
 - **OAuth2/OIDC Client Credentials Flow**: Machine-to-machine authentication
 - **JWT Token Validation**: Validate access tokens, ID tokens, and custom JWTs
@@ -39,7 +39,7 @@ AgentAuth provides **significantly superior security** compared to the standard 
 | **Token Security** | ✅ Simple storage with TTL | ⚠️ Standard token storage |
 | **Cryptographic Security** | ✅ HMAC auth, certificate validation | ⚠️ Standard JWT validation |
 
-## Installation
+## 📦 Installation
 
 ### From Source
 
@@ -109,7 +109,7 @@ export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-google-client-secret"
 
 > **📝 Note**: These are test-specific variables that are IdP independent. The documentation uses placeholder URLs (`https://test.issuer.com`, `https://your-idp.example.com`) for examples only. In production, set the `AGENTAUTH_IDP_BASE_URL` environment variable to your actual IdP endpoint. For testing, set all three `AGENTAUTH_TEST_*` variables to your real IdP credentials.
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Basic Usage
 
@@ -150,7 +150,7 @@ payload = client.validate_token(
 )
 ```
 
-## Environment Variables
+## 🔧 Environment Variables
 
 The AgentAuth library uses several environment variables for configuration.
 
@@ -281,36 +281,6 @@ export AGENTAUTH_AUDIT_LOG_FILE=/var/log/security.log
 export AGENTAUTH_ENABLE_DEBUG=false
 ```
 
-#### **Configurable Security Policies**
-
-AgentAuth supports fine-grained security policy configuration using the SecurityBuilder pattern:
-
-```python
-from agentauth.config.security_config import SecurityBuilder
-
-# High-security policy
-high_security_config = (SecurityBuilder()
-    .with_security_enabled(True)
-    .with_input_limits(max_token_length=4096, max_url_length=1024)
-    .with_resource_limits(max_response_size=512*1024, max_processing_time=15)
-    .with_audit_logging(audit_log_file="/var/log/security.log", enable_debug=False)
-    .with_rate_limiting(rate_limit_per_minute=1000)
-    .with_tls_settings(min_tls_version="TLSv1.3", verify_ssl=True)
-    .build())
-
-# Development policy
-dev_security_config = (SecurityBuilder()
-    .with_security_enabled(True)
-    .with_input_limits(max_token_length=8192, max_url_length=2048)
-    .with_resource_limits(max_response_size=1024*1024, max_processing_time=30)
-    .with_audit_logging(audit_log_file=None, enable_debug=True)
-    .with_rate_limiting(rate_limit_per_minute=5000)
-    .with_tls_settings(min_tls_version="TLSv1.2", verify_ssl=True)
-    .build())
-```
-
-> **📖 For detailed security configuration examples, see [SECURITY.md](SECURITY.md)**
-
 ### Google Cloud Configuration
 
 ```bash
@@ -328,7 +298,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="path/to/service-account-key.json"
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 ```
 
-## API Reference
+## 📚 API Reference
 
 ### Configuration Classes
 
@@ -903,7 +873,7 @@ else:
     raise SecurityError("Insecure cryptographic parameters")
 ```
 
-## Examples
+## 💡 Examples
 
 ### Google Cloud IAM Example
 
@@ -948,7 +918,7 @@ python examples/security_example.py
 
 <img width="781" height="1076" alt="agentauth_example_web_sequence" src="https://github.com/user-attachments/assets/1609edbd-1a01-408e-8719-79bb15fe2163" />
 
-## Testing
+## 🧪 Testing
 
 ### Run Tests
 
@@ -1007,7 +977,7 @@ python -m unittest tests.test_config -v
 
 > **Note:** The test suite uses comprehensive mocking to avoid real network requests. All HTTP calls are mocked to ensure reliable, deterministic test execution.
 
-## Error Handling
+## ⚠️ Error Handling
 
 The library provides comprehensive error handling with the `OAuth2OIDCError` and `SecurityError` exceptions.
 
@@ -1046,7 +1016,7 @@ The library provides comprehensive error handling with the `OAuth2OIDCError` and
        print(f"Security violation: {e}")
    ```
 
-## Supported IdPs
+## 🌐 Supported IdPs
 
 This library works with any IdP that implements OAuth2/OIDC standards, including:
 
@@ -1059,7 +1029,7 @@ This library works with any IdP that implements OAuth2/OIDC standards, including
 - **Ping Identity**
 - **Custom IdPs**
 
-## Security Considerations
+## 🔐 Security Considerations
 
 1. **Token Storage**: Store tokens securely and never log them
 2. **Client Secrets**: Keep client secrets secure and rotate regularly
@@ -1068,14 +1038,14 @@ This library works with any IdP that implements OAuth2/OIDC standards, including
 5. **Token Expiration**: Handle token expiration gracefully
 6. **HTTPS**: Always use HTTPS for all communications
 
-## Performance Optimization
+## ⚡ Performance Optimization
 
 1. **Caching**: The library automatically caches tokens and JWKS
 2. **Connection Pooling**: Uses requests session for connection reuse
 3. **Timeout Configuration**: Configure appropriate timeouts
 4. **JWKS TTL**: Adjust JWKS cache TTL based on your needs
 
-## Logging
+## 📝 Logging
 
 The library provides comprehensive logging. Configure logging level as needed:
 
@@ -1084,7 +1054,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 ```
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -1092,7 +1062,7 @@ logging.basicConfig(level=logging.INFO)
 4. Add tests
 5. Submit a pull request
 
-## Development
+## 🛠️ Development
 
 ### Setup Development Environment
 
@@ -1123,18 +1093,18 @@ black agentauth/
 mypy agentauth/
 ```
 
-## License
+## 📄 License
 
 This library is licensed under the Apache 2.0 License.
 
-## Support
+## 💬 Support
 
 For issues and questions:
 1. Check the documentation
 2. Review the examples
 3. Open an issue on GitHub
 
-## Changelog
+## 📋 Changelog
 
 ### Version 0.0.1
 - Initial release

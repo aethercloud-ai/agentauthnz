@@ -10,19 +10,19 @@ This document outlines the security enhancements implemented in the AgentAuth li
 
 AgentAuth implements comprehensive security measures to protect sensitive data:
 
-#### **Sensitive Data Protection**
+### **Sensitive Data Protection**
 - **JWT Payload Sanitization**: Sensitive claims in JWT payloads are automatically redacted
 - **Token Hashing**: Raw tokens are never logged; only SHA-256 hashes are used for correlation
 - **Input Validation**: All inputs are validated and sanitized to prevent injection attacks
 - **Secure Error Handling**: Error messages are sanitized to prevent information disclosure
 
-#### **Audit Logging**
+### **Audit Logging**
 - **Security Event Logging**: All security events are logged with sanitized data
 - **Token Validation Tracking**: Token validation attempts are logged with hashes for correlation
 - **Payload Access Logging**: JWT payload access is logged with sensitive claims redacted
 - **Rate Limit Monitoring**: Rate limit violations are logged for threat detection
 
-#### **Cryptographic Security**
+### **Cryptographic Security**
 - **Parameter Validation**: Cryptographic parameters are validated for security
 - **Anti-Replay Protection**: Nonce-based protection against token replay attacks
 - **SSRF Protection**: URL validation prevents Server-Side Request Forgery attacks
@@ -30,53 +30,79 @@ AgentAuth implements comprehensive security measures to protect sensitive data:
 - **Secure Random Generation**: Uses cryptographically secure random number generation
 - **Memory Washing**: Securely wipes sensitive data from memory
 
-#### **TLS/SSL Security**
+### **TLS/SSL Security**
 - **TLS 1.3 Preferred**: Enforces TLS 1.3 with TLS 1.2 fallback for compatibility
 - **Secure Cipher Suites**: Enforces AES-GCM, ChaCha20-Poly1305, and other strong ciphers
 - **Certificate Validation**: Mandatory SSL certificate verification and hostname matching
 - **Downgrade Protection**: Prevents downgrade to insecure protocols (SSLv2, SSLv3, TLSv1, TLSv1.1)
 
-#### **Resource Limiting & DoS Protection**
+### **Resource Limiting & DoS Protection**
 - **Response Size Limits**: Prevents memory exhaustion attacks (1MB default limit)
 - **Processing Time Limits**: CPU exhaustion protection (30-second timeout)
 - **Concurrency Control**: Limits concurrent requests (10 max default)
 - **Rate Limiting**: Prevents abuse (3000 requests/minute default)
 - **Memory Usage Control**: Monitors and limits memory consumption
 
-#### **Code Injection Protection**
+### **Code Injection Protection**
 - **Algorithm Validation**: Whitelist of allowed cryptographic algorithms
 - **Key Type Validation**: Validates JWK key types against allowed list
 - **Dangerous Pattern Detection**: Identifies code injection attempts in inputs
 - **Input Content Validation**: Validates token and URL content for malicious patterns
 - **Safe Value Checking**: Ensures all input values are safe before processing
 
-#### **Configurable Security Policies**
+### **Configurable Security Policies**
 - **Granular Control**: Fine-grained security policy configuration
 - **Runtime Updates**: Dynamic security policy changes without restart
 - **Environment-Specific**: Different policies for different environments
 - **Security Builder Pattern**: Type-safe security configuration using builder pattern
 - **Default Secure Settings**: Secure defaults for all configurations
 
-#### **Security Framework Integration**
+AgentAuth supports fine-grained security policy configuration using the SecurityBuilder pattern:
+
+```python
+from agentauth.config.security_config import SecurityBuilder
+
+# High-security policy
+high_security_config = (SecurityBuilder()
+    .with_security_enabled(True)
+    .with_input_limits(max_token_length=4096, max_url_length=1024)
+    .with_resource_limits(max_response_size=512*1024, max_processing_time=15)
+    .with_audit_logging(audit_log_file="/var/log/security.log", enable_debug=False)
+    .with_rate_limiting(rate_limit_per_minute=1000)
+    .with_tls_settings(min_tls_version="TLSv1.3", verify_ssl=True)
+    .build())
+
+# Development policy
+dev_security_config = (SecurityBuilder()
+    .with_security_enabled(True)
+    .with_input_limits(max_token_length=8192, max_url_length=2048)
+    .with_resource_limits(max_response_size=1024*1024, max_processing_time=30)
+    .with_audit_logging(audit_log_file=None, enable_debug=True)
+    .with_rate_limiting(rate_limit_per_minute=5000)
+    .with_tls_settings(min_tls_version="TLSv1.2", verify_ssl=True)
+    .build())
+```
+
+### **Security Framework Integration**
 - **Unified Security Interface**: Single point of security control
 - **Component Coordination**: Integrated security component management
 - **Policy Enforcement**: Consistent security policy application across components
 - **Security State Management**: Tracks security framework state
 
-#### **Security Performance & Monitoring**
+### **Security Performance & Monitoring**
 - **Security Performance Metrics**: Monitors security operation performance
 - **Resource Usage Tracking**: Tracks CPU, memory, and network usage
 - **Security Event Correlation**: Links related security events
 - **Real-time Monitoring**: Live security event monitoring
 
-#### **Developer Security Tools**
+### **Developer Security Tools**
 - **Security Testing**: Comprehensive security test suite (99 security tests)
 - **Security Examples**: Secure implementation examples provided
 - **Security Documentation**: Detailed security documentation and best practices
 - **Security Utilities**: Helper functions for secure operations
 - **Security Validation**: Built-in security validation tools
 
-#### **Advanced Security Features**
+### **Advanced Security Features**
 - **SSRF Protection**: Blocks requests to private IP ranges and metadata endpoints
 - **XSS Prevention**: Detects and blocks cross-site scripting attempts
 - **Path Traversal Protection**: Prevents directory traversal attacks
@@ -125,7 +151,7 @@ AgentAuth implements comprehensive security measures to protect sensitive data:
 - Simple and efficient memory usage
 - No encryption overhead for basic use cases
 
-### 2. Enhanced Input Validation and Sanitization
+### 3. Enhanced Input Validation and Sanitization
 
 **Problem**: Limited input validation allowed potential injection attacks and malicious input.
 
@@ -153,7 +179,7 @@ url = sanitizer.sanitize_url("https://api.example.com/jwks")
 client_id = sanitizer.sanitize_client_id("client_123")
 ```
 
-### 3. Secure Error Handling
+### 4. Secure Error Handling
 
 **Problem**: Error messages could disclose sensitive information about system internals.
 
@@ -179,7 +205,7 @@ except Exception as e:
     # error_message contains sanitized message for users
 ```
 
-### 4. Sensitive Data Protection and Audit Logging
+### 5. Sensitive Data Protection and Audit Logging
 
 **Problem**: Sensitive JWT payload data could be logged, exposing user information.
 
@@ -230,7 +256,7 @@ def sanitize_jwt_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
     return sanitized
 ```
 
-### 5. Resource Limits and DoS Protection
+### 6. Resource Limits and DoS Protection
 
 **Problem**: No protection against DoS attacks and resource exhaustion.
 
@@ -258,7 +284,7 @@ result = limiter.limit_processing_time(expensive_function, *args)
 limiter.acquire_request_slot(client_id)
 ```
 
-### 5. Advanced Audit Logging
+### 7. Advanced Audit Logging
 
 **Problem**: Insufficient security event logging for monitoring and compliance.
 
@@ -286,7 +312,7 @@ audit_logger.log_token_validation("token_hash", True, validation_details)
 audit_logger.log_security_violation("injection_attempt", details)
 ```
 
-### 6. Code Injection Protection
+### 8. Code Injection Protection
 
 **Problem**: No protection against code injection and RCE attacks.
 
@@ -327,7 +353,7 @@ self._access_token_expiry = time.time() + 3600
 token = self._access_token_cache.get('access_token', '')
 ```
 
-### 2. Cryptographic Authentication
+### 9. Cryptographic Authentication
 
 **Problem**: No verification that applications using the library are authorized.
 
@@ -351,7 +377,7 @@ auth_token = auth.generate_hmac_token("client_id_123")
 is_valid = auth.verify_hmac_token(auth_token, "client_id_123")
 ```
 
-### 3. Enhanced Token Validation
+### 10. Enhanced Token Validation
 
 **Problem**: Basic JWT validation without security checks.
 
@@ -385,7 +411,7 @@ payload = client.validate_token(
 )
 ```
 
-### 4. Anti-Replay Protection
+### 11. Anti-Replay Protection
 
 **Problem**: Tokens could be replayed maliciously.
 
@@ -409,7 +435,7 @@ header = {
 }
 ```
 
-### 5. Secure Memory Management
+### 12. Secure Memory Management
 
 **Problem**: Sensitive data remains in memory after use.
 
@@ -418,7 +444,7 @@ header = {
 - Multiple overwrite passes (random, zeros, ones)
 - Automatic cleanup on object destruction
 
-### 6. Transport Security (TLS 1.3 Preferred, TLS 1.2 Fallback)
+### 13. Transport Security (TLS 1.3 Preferred, TLS 1.2 Fallback)
 
 **Problem**: No enforcement of secure transport protocols for network communications.
 
@@ -1014,14 +1040,14 @@ def test_security_hardening():
         pass
 ```
 
-### 2. Vulnerability Scanning
+### 3. Vulnerability Scanning
 
 - Use static analysis tools (Bandit, Semgrep)
 - Run dynamic analysis tools (OWASP ZAP)
 - Perform dependency scanning (Safety, Snyk)
 - Conduct regular security audits
 
-### 3. Transport Security Testing
+### 4. Transport Security Testing
 
 **Note:** These examples use the `AGENTAUTH_TEST_IDP_BASE_URL` environment variable. Set it to your test IdP endpoint:
 
@@ -1058,7 +1084,7 @@ def test_transport_security():
         print("✅ HTTPS enforcement working")
 ```
 
-### 4. Security Monitoring
+### 5. Security Monitoring
 
 ```python
 # Monitor security events
