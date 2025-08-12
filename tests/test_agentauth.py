@@ -37,8 +37,8 @@ def create_test_client(**kwargs):
     default_config = {
         "idp_name": "Test IdP",
         "idp_endpoint": get_test_idp_base_url(),
-        "client_id": "test-client-id",
-        "client_secret": "test-client-secret",
+        "client_id": os.getenv("AGENTAUTH_TEST_IDP_CLIENT_ID", "test-client-id"),
+        "client_secret": os.getenv("AGENTAUTH_TEST_IDP_CLIENT_SECRET", "test-client-secret"),
         "scope": "test-scope"
     }
     default_config.update(kwargs)
@@ -590,20 +590,8 @@ class TestIntegrationScenarios(unittest.TestCase):
             algorithm="HS256"
         )
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
-    def test_full_authentication_flow(self, mock_http_client_class, mock_verify_tls):
+    def test_full_authentication_flow(self):
         """Test complete authentication flow."""
-        # Mock the SecureHTTPClient
-        mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client.post.return_value.json.return_value = {
-            "access_token": self.mock_jwt_token,
-            "token_type": "Bearer",
-            "expires_in": 3600
-        }
-        mock_http_client_class.return_value = mock_http_client
-        
         client = create_test_client()
         
         # Test authentication
@@ -614,11 +602,6 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.assertTrue(client._is_token_valid())
         
         # Test JWKS retrieval
-        mock_response = Mock()
-        mock_response.json.return_value = self.mock_jwks
-        mock_response.headers = {'content-length': '1000'}
-        mock_response.content = b'{"keys": [{"kty": "RSA", "kid": "test-key-1", "alg": "RS256", "use": "sig", "n": "test-n-value", "e": "AQAB"}]}'
-        mock_http_client.get.return_value = mock_response
         jwks = client.get_jwks()
         self.assertEqual(jwks, self.mock_jwks)
     
