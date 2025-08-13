@@ -32,25 +32,31 @@ AgentAuth provides significantly stronger security compared to the standard Auth
 | **Transport Security** | ✅ TLS 1.3 preferred, TLS 1.2 fallback | ⚠️ Standard HTTPS |
 | **Input Validation** | ✅ Comprehensive sanitization, SSRF protection | ⚠️ Basic JWT validation |
 | **Error Handling** | ✅ Secure error handler, no info disclosure | ⚠️ Standard exception handling |
-| **Access Control** | ✅ Required library authentication | ❌ No authentication |
 | **Rate Limiting** | ✅ Built-in rate limiting, DoS protection | ❌ No rate limiting |
 | **Audit Logging** | ✅ Comprehensive security event logging | ❌ No audit logging |
 | **Code Injection Protection** | ✅ Advanced protection, pattern detection | ❌ No protection |
-| **Token Security** | ✅ Simple storage with TTL | ⚠️ Standard token storage |
+| **Token Security** | ⚠️ Simple storage with TTL | ⚠️ Standard token storage |
 | **Cryptographic Security** | ✅ HMAC auth, certificate validation | ⚠️ Standard JWT validation |
 
 ## 🌐 Supported IdPs
 
-This library works with any IdP that implements OAuth2/OIDC standards, including:
+Pending comprehensiove testing, the library should works with any IdP that implements OAuth2/OIDC standards, such as:
 
-- **Google Cloud IAM**
-- **Azure Active Directory**
-- **AWS Cognito**
-- **Auth0**
-- **Keycloak**
-- **Okta**
-- **Ping Identity**
-- **Custom IdPs**
+| Identity Provider          | M2M Authentication Landing Page URL                                                                 |
+|---------------------------|----------------------------------------------------------------------------------|
+| Amazon Cognito            | [https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html) |
+| Auth0                     | [https://auth0.com/docs/get-started/authentication-and-authorization-flows/client-credentials-flow](https://auth0.com/docs/get-started/authentication-and-authorization-flows/client-credentials-flow) |
+| Authentik                 | [https://docs.goauthentik.io/docs/providers/oauth2/service-accounts](https://docs.goauthentik.io/docs/providers/oauth2/service-accounts) |
+| ForgeRock                 | [https://backstage.forgerock.com/docs/am/7.2/oauth2-guide/oauth2-client-credentials.html](https://backstage.forgerock.com/docs/am/7.2/oauth2-guide/oauth2-client-credentials.html) |
+| Google Cloud Identity Platform | [https://cloud.google.com/identity-platform/docs/oauth#machine-to-machine_authentication](https://cloud.google.com/identity-platform/docs/oauth#machine-to-machine_authentication) |
+| IBM Security Verify       | [https://www.ibm.com/docs/en/security-verify?topic=applications-configuring-oauth-client-credentials](https://www.ibm.com/docs/en/security-verify?topic=applications-configuring-oauth-client-credentials) |
+| Keycloak                  | [https://www.keycloak.org/docs/latest/securing_apps/#client-credentials-grant](https://www.keycloak.org/docs/latest/securing_apps/#client-credentials-grant) |
+| Microsoft Entra ID        | [https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow) |
+| Okta                      | [https://developer.okta.com/docs/guides/client-credentials/main/](https://developer.okta.com/docs/guides/client-credentials/main/) |
+| OneLogin                  | [https://developers.onelogin.com/api-docs/2/oauth-2.0/client-credentials](https://developers.onelogin.com/api-docs/2/oauth-2.0/client-credentials) |
+| Oracle Cloud Infrastructure IAM | [https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/oauth.htm](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/oauth.htm) |
+| Ping Identity             | [https://docs.pingidentity.com/pingone/latest/m2m/](https://docs.pingidentity.com/pingone/latest/m2m/) |
+| SAP Identity Authentication Service | [https://help.sap.com/docs/IDENTITY_AUTHENTICATION/6d6d63354d1242d185ab4830fc04feb1/6b6d43e3d4f145b0b15853e77e3f9b06.html](https://help.sap.com/docs/IDENTITY_AUTHENTICATION/6d6d63354d1242d185ab4830fc04feb1/6b6d43e3d4f145b0b15853e77e3f9b06.html) |
 
 ## 📦 Installation
 
