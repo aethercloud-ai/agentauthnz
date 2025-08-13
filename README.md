@@ -20,8 +20,8 @@ AgentAuth provides significantly stronger security compared to the standard Auth
 
 ## 🔒 AgentAuth vs. Authlib
 
-| Library | Security Score | Strengths | Weaknesses |
-|---------|----------------|-----------|------------|
+| Library | Strengths | Weaknesses |
+|--------------|-----------------|-----------------|
 | **AgentAuth** | Enterprise-grade security, comprehensive protection | Narrow scope (OAuth2/OIDC client only) |
 | **Authlib** | Standard OAuth/OIDC implementation | Limited security features, no advanced protection |
 
