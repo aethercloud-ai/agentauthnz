@@ -39,6 +39,19 @@ AgentAuth provides **significantly superior security** compared to the standard 
 | **Token Security** | ✅ Simple storage with TTL | ⚠️ Standard token storage |
 | **Cryptographic Security** | ✅ HMAC auth, certificate validation | ⚠️ Standard JWT validation |
 
+## 🌐 Supported IdPs
+
+This library works with any IdP that implements OAuth2/OIDC standards, including:
+
+- **Google Cloud IAM**
+- **Azure Active Directory**
+- **AWS Cognito**
+- **Auth0**
+- **Keycloak**
+- **Okta**
+- **Ping Identity**
+- **Custom IdPs**
+
 ## 📦 Installation
 
 ### From Source
@@ -971,19 +984,6 @@ The library provides comprehensive error handling with the `OAuth2OIDCError` and
    except SecurityError as e:
        print(f"Security violation: {e}")
    ```
-
-## 🌐 Supported IdPs
-
-This library works with any IdP that implements OAuth2/OIDC standards, including:
-
-- **Google Cloud IAM**
-- **Azure Active Directory**
-- **AWS Cognito**
-- **Auth0**
-- **Keycloak**
-- **Okta**
-- **Ping Identity**
-- **Custom IdPs**
 
 ## 🔐 Security Considerations
 
