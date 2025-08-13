@@ -57,57 +57,25 @@ cd agentauth
 pip install -e ".[dev]"
 ```
 
-## ⚠️ Required Environment Variables for Testing
+## 🧪 Testing
 
-**IMPORTANT**: Before running tests, you must set the following environment variables:
+**IMPORTANT**: All tests use mock data and do not require any external IdP endpoints or network access. Tests are designed to be completely self-contained and can be run without any environment variable configuration.
 
-### Basic Testing (Required for all tests)
-```bash
-# Required for all tests - set to your actual IdP base URL
-export AGENTAUTH_TEST_IDP_BASE_URL="https://your-idp.example.com"
-```
-
-### Real OAuth2 Authentication Testing (Required for authentication tests)
-```bash
-# Required for real OAuth2 authentication tests
-export AGENTAUTH_TEST_IDP_CLIENT_ID="your-oauth2-client-id"
-export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-oauth2-client-secret"
-```
-
-**Complete test environment setup:**
+### Running Tests
 
 ```bash
-# Set all three test-specific variables (these are IdP independent)
-export AGENTAUTH_TEST_IDP_BASE_URL="https://your-idp.example.com"
-export AGENTAUTH_TEST_IDP_CLIENT_ID="your-oauth2-client-id"
-export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-oauth2-client-secret"
+# Run all tests
+python -m pytest tests/
+
+# Run specific test file
+python tests/test_agentauth.py
+python tests/test_agentauth_security.py
+
+# Run with verbose output
+python -m pytest tests/ -v
 ```
 
-**Example configurations for different IdPs:**
-
-```bash
-# For Auth0
-export AGENTAUTH_TEST_IDP_BASE_URL="https://yourcompany.auth0.com"
-export AGENTAUTH_TEST_IDP_CLIENT_ID="your-auth0-client-id"
-export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-auth0-client-secret"
-
-# For Azure AD  
-export AGENTAUTH_TEST_IDP_BASE_URL="https://login.microsoftonline.com/your-tenant-id"
-export AGENTAUTH_TEST_IDP_CLIENT_ID="your-azure-application-id"
-export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-azure-client-secret"
-
-# For Okta
-export AGENTAUTH_TEST_IDP_BASE_URL="https://yourcompany.okta.com"
-export AGENTAUTH_TEST_IDP_CLIENT_ID="your-okta-client-id"
-export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-okta-client-secret"
-
-# For Google Cloud IAM (see dedicated Google example section)
-export AGENTAUTH_TEST_IDP_BASE_URL="https://accounts.google.com"
-export AGENTAUTH_TEST_IDP_CLIENT_ID="your-google-oauth2-client-id"
-export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-google-client-secret"
-```
-
-> **📝 Note**: These are test-specific variables that are IdP independent. The documentation uses placeholder URLs (`https://test.issuer.com`, `https://your-idp.example.com`) for examples only. In production, set the `AGENTAUTH_IDP_BASE_URL` environment variable to your actual IdP endpoint. For testing, set all three `AGENTAUTH_TEST_*` variables to your real IdP credentials.
+> **📝 Note**: Tests use mock data and simulated responses. No real IdP credentials or network access is required. All tests are designed to be completely isolated and can run in any environment.
 
 ## 🚀 Quick Start
 
@@ -154,15 +122,7 @@ payload = client.validate_token(
 
 The AgentAuth library uses several environment variables for configuration.
 
-### Required for Testing
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `AGENTAUTH_TEST_IDP_BASE_URL` | **Yes** | None | Base URL of your Identity Provider (required for all tests) |
-| `AGENTAUTH_TEST_IDP_CLIENT_ID` | **Yes*** | None | OAuth2 client ID for real authentication tests (IdP independent) |
-| `AGENTAUTH_TEST_IDP_CLIENT_SECRET` | **Yes*** | None | OAuth2 client secret for real authentication tests (IdP independent) |
-
-*Required only for tests that perform real OAuth2 authentication.
 
 ### Production Configuration Variables
 
@@ -223,21 +183,17 @@ client_config = ClientBuilder().with_idp("My IdP", "https://hardcoded.example.co
 # Result: client will use https://production.idp.com (not the hardcoded URL)
 ```
 
-### Production vs Testing Environment Variables
+### Environment Variable Usage
 
 **For Production Applications**:
-- Use `AGENTAUTH_*` variables (without `TEST_` prefix)
+- Use `AGENTAUTH_*` variables for configuration
 - Set `AGENTAUTH_IDP_BASE_URL` to override IdP endpoints
 - Configure security, timeouts, and logging variables as needed
 
 **For Testing**:
-- Use `AGENTAUTH_TEST_*` variables for all test configurations:
-  - `AGENTAUTH_TEST_IDP_BASE_URL` - Required for all tests
-  - `AGENTAUTH_TEST_IDP_CLIENT_ID` - Required for real authentication tests
-  - `AGENTAUTH_TEST_IDP_CLIENT_SECRET` - Required for real authentication tests
-- Tests will fail with clear error messages if required variables are not set
-- Test variables are completely separate from production variables
-- All test variables are IdP independent and work with any OAuth2/OIDC provider
+- Tests use mock data and do not require any environment variables
+- All tests are completely self-contained and isolated
+- No external IdP endpoints or network access required
 
 ### Environment Variable Validation
 

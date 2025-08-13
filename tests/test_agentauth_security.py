@@ -36,14 +36,8 @@ from agentauth.utils.exceptions import SecurityError
 
 
 def get_test_idp_base_url():
-    """Get the test IdP base URL from environment variable or emit error if not set."""
-    base_url = os.getenv("AGENTAUTH_TEST_IDP_BASE_URL")
-    if not base_url:
-        print("ERROR: AGENTAUTH_TEST_IDP_BASE_URL environment variable is not set.")
-        print("Please set it to your IdP base URL, e.g.:")
-        print("  export AGENTAUTH_TEST_IDP_BASE_URL='https://your-idp.example.com'")
-        raise ValueError("AGENTAUTH_TEST_IDP_BASE_URL environment variable is required for tests")
-    return base_url.rstrip('/')
+    """Get the test IdP base URL for testing."""
+    return "https://test.issuer.com"
 
 
 class TestCryptographicAuthenticator(unittest.TestCase):
@@ -176,13 +170,18 @@ class TestInputSanitizer(unittest.TestCase):
         with self.assertRaises(SecurityError):
             self.sanitizer.sanitize_jwt_token(token_with_xss)
     
-    def test_sanitize_url_valid(self):
+    @patch('agentauth.core.discovery.discover_oidc_config')
+    def test_sanitize_url_valid(self, mock_discover):
         """Test sanitization of valid URL."""
-        # Get real JWKS URI from OIDC discovery - no hardcoded paths
-        from agentauth.core.discovery import discover_oidc_config
+        # Mock OIDC discovery
+        mock_discover.return_value = {
+            "issuer": get_test_idp_base_url(),
+            "jwks_uri": f"{get_test_idp_base_url()}/.well-known/jwks.json"
+        }
+        
         base_url = get_test_idp_base_url()
-        oidc_config = discover_oidc_config(base_url)
-        url = oidc_config["jwks_uri"]  # Use real JWKS URI from IdP
+        oidc_config = mock_discover(base_url)
+        url = oidc_config["jwks_uri"]
         result = self.sanitizer.sanitize_url(url)
         self.assertEqual(result, url)
     
@@ -681,10 +680,12 @@ class TestSecureHTTPClient(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.client = SecureHTTPClient()
-        # Get real OIDC configuration once for all tests to avoid conflicts with mocking
-        from agentauth.core.discovery import discover_oidc_config
-        base_url = get_test_idp_base_url()
-        self.oidc_config = discover_oidc_config(base_url)
+        # Mock OIDC configuration for testing
+        self.oidc_config = {
+            "issuer": get_test_idp_base_url(),
+            "jwks_uri": f"{get_test_idp_base_url()}/.well-known/jwks.json",
+            "token_endpoint": f"{get_test_idp_base_url()}/oauth2/token"
+        }
     
     def test_init(self):
         """Test initialization."""
@@ -697,6 +698,10 @@ class TestSecureHTTPClient(unittest.TestCase):
         mock_response = Mock()
         mock_response.json.return_value = {"test": "data"}
         mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '1000'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"test": "data"}'
+        mock_response.status_code = 200
         mock_get.return_value = mock_response
         
         # Use real JWKS URI from OIDC discovery - no hardcoded paths
@@ -711,6 +716,10 @@ class TestSecureHTTPClient(unittest.TestCase):
         mock_response = Mock()
         mock_response.json.return_value = {"access_token": "test-token"}
         mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '500'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"access_token": "test-token"}'
+        mock_response.status_code = 200
         mock_post.return_value = mock_response
         
         data = {"grant_type": "client_credentials"}

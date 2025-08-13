@@ -268,8 +268,21 @@ class OAuth2OIDCClient:
             
             # Security. Validate JWKS structure
             if self.enable_security:
-                if not self.security.injection_protector.validate_jwk_structure(jwks_data):
-                    raise SecurityError("Invalid JWKS structure")
+                # Validate that JWKS has the required structure
+                if not isinstance(jwks_data, dict) or 'keys' not in jwks_data:
+                    raise SecurityError("Invalid JWKS structure: missing 'keys' field")
+                
+                if not isinstance(jwks_data['keys'], list):
+                    raise SecurityError("Invalid JWKS structure: 'keys' must be an array")
+                
+                # Check if JWKS is empty
+                if len(jwks_data['keys']) == 0:
+                    raise SecurityError("Invalid JWKS structure: 'keys' array cannot be empty")
+                
+                # Validate each key in the JWKS
+                for key in jwks_data['keys']:
+                    if not self.security.injection_protector.validate_jwk_structure(key):
+                        raise SecurityError("Invalid JWK structure in JWKS")
             
             # Cache JWKS with TTL
             self._jwks_cache = jwks_data

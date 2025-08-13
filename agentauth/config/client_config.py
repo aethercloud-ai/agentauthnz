@@ -43,7 +43,8 @@ class ClientConfig:
         if os.getenv("AGENTAUTH_CERT_CHAIN"):
             self.cert_chain = os.getenv("AGENTAUTH_CERT_CHAIN")
         
-        if os.getenv("AGENTAUTH_IDP_BASE_URL"):
+        # Only override idp_endpoint if it's not already set (allows tests to use their own endpoints)
+        if os.getenv("AGENTAUTH_IDP_BASE_URL") and not self.idp_endpoint:
             self.idp_endpoint = os.getenv("AGENTAUTH_IDP_BASE_URL").rstrip('/')
 
 

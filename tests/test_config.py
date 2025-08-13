@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 
 
 def get_test_idp_base_url():
-    """Get the test IdP base URL from environment variable or use default."""
-    return os.getenv("AGENTAUTH_IDP_BASE_URL", "https://test.issuer.com").rstrip('/')
+    """Get the test IdP base URL for testing (completely independent of environment variables)."""
+    return "https://test.issuer.com"
 
 
 class TestData:
@@ -244,6 +244,10 @@ class TestUtilities:
             mock_response = Mock()
             mock_response.json.return_value = TestData.MOCK_OIDC_CONFIG
             mock_response.raise_for_status.return_value = None
+            mock_response.headers = {'content-length': '1000'}
+            mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+            mock_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+            mock_response.status_code = 200
             mock_get.return_value = mock_response
             
             # Create config from test data

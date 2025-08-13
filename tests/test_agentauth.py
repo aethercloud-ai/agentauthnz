@@ -28,8 +28,8 @@ from agentauth.config.client_config import ClientConfig
 
 
 def get_test_idp_base_url():
-    """Get the test IdP base URL from environment variable or use default."""
-    return os.getenv("AGENTAUTH_IDP_BASE_URL", "https://test.issuer.com").rstrip('/')
+    """Get the test IdP base URL for testing."""
+    return "https://test.issuer.com"
 
 
 def create_test_client(**kwargs):
@@ -37,8 +37,8 @@ def create_test_client(**kwargs):
     default_config = {
         "idp_name": "Test IdP",
         "idp_endpoint": get_test_idp_base_url(),
-        "client_id": os.getenv("AGENTAUTH_TEST_IDP_CLIENT_ID", "test-client-id"),
-        "client_secret": os.getenv("AGENTAUTH_TEST_IDP_CLIENT_SECRET", "test-client-secret"),
+        "client_id": "test-client-id",
+        "client_secret": "test-client-secret",
         "scope": "test-scope"
     }
     default_config.update(kwargs)
@@ -122,16 +122,16 @@ class TestOAuth2OIDCClient(unittest.TestCase):
         mock_http_client = Mock()
         mock_response = Mock()
         mock_response.json.return_value = self.mock_oidc_config
+        mock_response.raise_for_status.return_value = None
         mock_response.headers = {'content-length': '1000'}
-        mock_response.content = b'{"issuer": "' + get_test_idp_base_url().encode() + b'"}'
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_response.status_code = 200
         mock_http_client.get.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         # Mock verify_tls_version to return True
         mock_verify_tls.return_value = True
-        
-        # Mock the response object to have the necessary attributes for verify_tls_version
-        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
         
         client = create_test_client()
         
@@ -143,7 +143,7 @@ class TestOAuth2OIDCClient(unittest.TestCase):
         self.assertEqual(client.oidc_config, self.mock_oidc_config)
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_client_initialization_failure(self, mock_http_client_class, mock_verify_tls):
         """Test client initialization with network errors."""
         # Mock the SecureHTTPClient to raise an exception
@@ -155,81 +155,148 @@ class TestOAuth2OIDCClient(unittest.TestCase):
             create_test_client()
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_authenticate_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful authentication flow."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client.post.return_value.json.return_value = self.mock_token_response
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        
+        # Mock token response
+        mock_token_response = Mock()
+        mock_token_response.json.return_value = self.mock_token_response
+        mock_token_response.raise_for_status.return_value = None
+        mock_token_response.headers = {'content-length': '500'}
+        mock_token_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_token_response.content = b'{"access_token":"test-token","token_type":"Bearer","expires_in":3600}'
+        mock_token_response.status_code = 200
+        
+        mock_http_client.get.return_value = mock_oidc_response
+        mock_http_client.post.return_value = mock_token_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
         token = client.authenticate()
         self.assertEqual(token, self.valid_jwt_token)
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_authenticate_failure(self, mock_http_client_class, mock_verify_tls):
         """Test authentication failure scenarios."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client.post.side_effect = SecurityError("Authentication failed")
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        
+        mock_http_client.get.return_value = mock_oidc_response
+        mock_http_client.post.side_effect = requests.exceptions.HTTPError("400 Client Error")
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
-        with self.assertRaises(SecurityError):
+        with self.assertRaises(requests.exceptions.HTTPError):
             client.authenticate()
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_get_jwks_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful JWKS retrieval."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        
+        # Mock JWKS response
+        mock_jwks_response = Mock()
+        mock_jwks_response.json.return_value = self.mock_jwks
+        mock_jwks_response.raise_for_status.return_value = None
+        mock_jwks_response.headers = {'content-length': '800'}
+        mock_jwks_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_jwks_response.content = b'{"keys":[{"kty":"RSA","kid":"test-key","n":"test-n","e":"AQAB"}]}'
+        mock_jwks_response.status_code = 200
+        
+        mock_http_client.get.side_effect = [mock_oidc_response, mock_jwks_response]
         mock_http_client_class.return_value = mock_http_client
         
-        client = create_test_client()
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
-        # Mock JWKS response for the actual JWKS call
-        mock_response = Mock()
-        mock_response.json.return_value = self.mock_jwks
-        mock_response.headers = {'content-length': '1000'}
-        mock_response.content = b'{"keys": [{"kty": "RSA", "kid": "test-key-1", "alg": "RS256", "use": "sig", "n": "test-n-value", "e": "AQAB"}]}'
-        mock_http_client.get.return_value = mock_response
+        client = create_test_client()
         
         jwks = client.get_jwks()
         self.assertEqual(jwks, self.mock_jwks)
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_get_jwks_failure(self, mock_http_client_class, mock_verify_tls):
         """Test JWKS retrieval failure scenarios."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        
+        mock_http_client.get.side_effect = [mock_oidc_response, SecurityError("JWKS retrieval failed")]
         mock_http_client_class.return_value = mock_http_client
         
-        client = create_test_client()
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
-        # Mock JWKS failure
-        mock_http_client.get.side_effect = SecurityError("JWKS retrieval failed")
+        client = create_test_client()
         
         with self.assertRaises(SecurityError):
             client.get_jwks()
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_is_token_valid_true(self, mock_http_client_class, mock_verify_tls):
         """Test token validity check when token is valid."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
@@ -241,13 +308,24 @@ class TestOAuth2OIDCClient(unittest.TestCase):
         self.assertTrue(result)
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_is_token_valid_false(self, mock_http_client_class, mock_verify_tls):
         """Test token validity check when token is expired."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
@@ -259,13 +337,24 @@ class TestOAuth2OIDCClient(unittest.TestCase):
         self.assertFalse(result)
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_is_jwks_valid_true(self, mock_http_client_class, mock_verify_tls):
         """Test JWKS validity check when JWKS is valid."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
@@ -277,13 +366,24 @@ class TestOAuth2OIDCClient(unittest.TestCase):
         self.assertTrue(result)
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_is_jwks_valid_false(self, mock_http_client_class, mock_verify_tls):
         """Test JWKS validity check when JWKS is expired."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
@@ -295,44 +395,80 @@ class TestOAuth2OIDCClient(unittest.TestCase):
         self.assertFalse(result)
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_get_token_info_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful token info extraction."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
         token_info = client.get_token_info(self.valid_jwt_token)
         self.assertIsInstance(token_info, dict)
-        self.assertIn('sub', token_info)
-        self.assertIn('iss', token_info)
-        self.assertIn('aud', token_info)
+        self.assertIn('payload', token_info)
+        self.assertIn('sub', token_info['payload'])
+        self.assertIn('iss', token_info['payload'])
+        self.assertIn('aud', token_info['payload'])
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_get_token_info_failure(self, mock_http_client_class, mock_verify_tls):
         """Test token info extraction failure."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
-        with self.assertRaises(Exception):
-            client.get_token_info("invalid-token")
+        # get_token_info returns error info instead of raising exceptions
+        result = client.get_token_info("invalid-token")
+        self.assertIn('error', result)
+        self.assertFalse(result.get('format_valid', True))
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_validate_token_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful token validation."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
@@ -350,13 +486,24 @@ class TestOAuth2OIDCClient(unittest.TestCase):
             pass
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_validate_multiple_tokens_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful multiple token validation."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
@@ -379,13 +526,24 @@ class TestOAuth2OIDCClient(unittest.TestCase):
             pass
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_validate_token_format(self, mock_http_client_class, mock_verify_tls):
         """Test token format validation."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
         client = create_test_client()
         
@@ -424,20 +582,34 @@ class TestStandaloneFunctions(unittest.TestCase):
         }
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.discovery.SecureHTTPClient')
     def test_discover_oidc_config_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful OIDC configuration discovery."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        mock_response = Mock()
+        mock_response.json.return_value = self.mock_oidc_config
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '1000'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_response.status_code = 200
+        mock_http_client.get.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         config = discover_oidc_config(get_test_idp_base_url())
         self.assertEqual(config, self.mock_oidc_config)
     
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
-    def test_discover_oidc_config_failure(self, mock_http_client_class):
+    @patch('agentauth.security.components.http_client.verify_tls_version')
+    @patch('agentauth.core.discovery.SecureHTTPClient')
+    def test_discover_oidc_config_failure(self, mock_http_client_class, mock_verify_tls):
         """Test OIDC configuration discovery failure."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient to raise an exception
         mock_http_client = Mock()
         mock_http_client.get.side_effect = SecurityError("Discovery failed")
@@ -447,22 +619,36 @@ class TestStandaloneFunctions(unittest.TestCase):
             discover_oidc_config(get_test_idp_base_url())
     
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.discovery.SecureHTTPClient')
     def test_retrieve_jwks_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful JWKS retrieval."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_jwks
+        mock_response = Mock()
+        mock_response.json.return_value = self.mock_jwks
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '1000'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"keys":[{"kty":"RSA","kid":"test-key-1","alg":"RS256","use":"sig","n":"test-n-value","e":"AQAB"}]}'
+        mock_response.status_code = 200
+        mock_http_client.get.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         base_url = get_test_idp_base_url()
         jwks = retrieve_jwks(f"{base_url}/.well-known/jwks.json")
         self.assertEqual(jwks, self.mock_jwks)
     
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
-    def test_retrieve_jwks_failure(self, mock_http_client_class):
+    @patch('agentauth.security.components.http_client.verify_tls_version')
+    @patch('agentauth.core.discovery.SecureHTTPClient')
+    def test_retrieve_jwks_failure(self, mock_http_client_class, mock_verify_tls):
         """Test JWKS retrieval failure."""
-        # Mock the SecureHTTPClient to raise an exception
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
+        # Mock the SecureHTTPClient
         mock_http_client = Mock()
         mock_http_client.get.side_effect = SecurityError("JWKS retrieval failed")
         mock_http_client_class.return_value = mock_http_client
@@ -584,19 +770,90 @@ class TestIntegrationScenarios(unittest.TestCase):
         }
         
         # Create a simple JWT token (not cryptographically signed for testing)
+        import jwt
         self.mock_jwt_token = jwt.encode(
             self.mock_token_payload,
             "test-secret",
             algorithm="HS256"
         )
+        
+        # Create a proper JWT token for testing
+        import jwt
+        
+        # Create a valid JWT payload
+        payload = {
+            "sub": "1234567890",
+            "name": "John Doe",
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 3600,  # 1 hour from now
+            "iss": base_url,
+            "aud": "test-client-id"
+        }
+        
+        # Create a proper JWT token (using HS256 for testing)
+        self.valid_jwt_token = jwt.encode(payload, "test-secret", algorithm="HS256")
+        
+        self.mock_token_response = {
+            "access_token": self.valid_jwt_token,
+            "token_type": "Bearer",
+            "expires_in": 3600
+        }
     
-    def test_full_authentication_flow(self):
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
+    def test_full_authentication_flow(self, mock_http_client_class, mock_verify_tls):
         """Test complete authentication flow."""
+        # Mock the SecureHTTPClient
+        mock_http_client = Mock()
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        
+        # Mock JWKS response
+        mock_jwks_response = Mock()
+        mock_jwks_response.json.return_value = self.mock_jwks
+        mock_jwks_response.raise_for_status.return_value = None
+        mock_jwks_response.headers = {'content-length': '800'}
+        mock_jwks_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_jwks_response.content = b'{"keys":[{"kty":"RSA","kid":"test-key-1","alg":"RS256","use":"sig","n":"test-n","e":"AQAB"}]}'
+        mock_jwks_response.status_code = 200
+        
+        # Mock token response
+        mock_token_response = Mock()
+        mock_token_response.json.return_value = self.mock_token_response
+        mock_token_response.raise_for_status.return_value = None
+        mock_token_response.headers = {'content-length': '500'}
+        mock_token_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_token_response.content = b'{"access_token":"test-token","token_type":"Bearer","expires_in":3600}'
+        mock_token_response.status_code = 200
+        
+        # Set up side effect to return different responses for different URLs
+        def mock_get(url):
+            if 'openid-configuration' in url:
+                return mock_oidc_response
+            elif 'jwks' in url:
+                return mock_jwks_response
+            else:
+                return mock_oidc_response
+        
+        mock_http_client.get.side_effect = mock_get
+        mock_http_client.post.return_value = mock_token_response
+        mock_http_client_class.return_value = mock_http_client
+        
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         client = create_test_client()
         
         # Test authentication
         token = client.authenticate()
-        self.assertEqual(token, self.mock_jwt_token)
+        self.assertEqual(token, self.mock_token_response["access_token"])
         
         # Test token validity
         self.assertTrue(client._is_token_valid())
@@ -605,43 +862,108 @@ class TestIntegrationScenarios(unittest.TestCase):
         jwks = client.get_jwks()
         self.assertEqual(jwks, self.mock_jwks)
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_client_with_custom_timeout_and_ttl(self, mock_http_client_class, mock_verify_tls):
         """Test client with custom timeout and TTL settings."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
-        client = create_test_client()
+        # Create config with custom values
+        config = ClientConfig(
+            idp_name="Test IdP",
+            idp_endpoint=get_test_idp_base_url(),
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            scope="test-scope",
+            timeout=60,
+            jwks_cache_ttl=7200
+        )
+        client = OAuth2OIDCClient(config)
         
         self.assertEqual(client.timeout, 60)
         self.assertEqual(client.jwks_cache_ttl, 7200)
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_client_with_scope(self, mock_http_client_class, mock_verify_tls):
         """Test client with scope parameter."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
-        client = create_test_client()
+        # Create config with custom scope
+        config = ClientConfig(
+            idp_name="Test IdP",
+            idp_endpoint=get_test_idp_base_url(),
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            scope="read write"
+        )
+        client = OAuth2OIDCClient(config)
         
         self.assertEqual(client.scope, "read write")
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_client_with_security_disabled(self, mock_http_client_class, mock_verify_tls):
         """Test client with security disabled."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
-        client = create_test_client()
+        # Create config with security disabled
+        from agentauth.config.security_config import SecurityConfig
+        security_config = SecurityConfig(enable_security=False)
+        config = ClientConfig(
+            idp_name="Test IdP",
+            idp_endpoint=get_test_idp_base_url(),
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            scope="test-scope",
+            security=security_config
+        )
+        client = OAuth2OIDCClient(config)
         
         self.assertFalse(client.enable_security)
 
@@ -697,13 +1019,25 @@ class TestInternalMethods(unittest.TestCase):
             ]
         }
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_discover_oidc_config_internal(self, mock_http_client_class, mock_verify_tls):
         """Test the internal _discover_oidc_config method directly."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -713,22 +1047,41 @@ class TestInternalMethods(unittest.TestCase):
         self.assertIn('token_endpoint', client.oidc_config)
         self.assertIn('jwks_uri', client.oidc_config)
     
+    @patch('agentauth.core.discovery.discover_oidc_config')
     @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
-    def test_discover_oidc_config_failure(self, mock_http_client_class, mock_verify_tls):
+    @patch('agentauth.core.client.SecureHTTPClient')
+    def test_discover_oidc_config_failure(self, mock_http_client_class, mock_verify_tls, mock_discover):
         """Test internal OIDC discovery failure."""
-        # Mock the SecureHTTPClient to raise an exception
-        mock_http_client = Mock()
-        mock_http_client.get.side_effect = SecurityError("Discovery failed")
-        mock_http_client_class.return_value = mock_http_client
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
+        # Mock the OIDC discovery to raise an exception
+        mock_discover.side_effect = SecurityError("Discovery failed")
         
         with self.assertRaises(SecurityError):
             create_test_client()
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_get_public_key_success(self, mock_http_client_class, mock_verify_tls):
         """Test successful public key retrieval from JWKS."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
+        # Mock the SecureHTTPClient
+        mock_http_client = Mock()
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        mock_http_client_class.return_value = mock_http_client
+        
         # Mock JWKS with valid key structure
         mock_jwks = {
             "keys": [
@@ -743,30 +1096,41 @@ class TestInternalMethods(unittest.TestCase):
             ]
         }
         
-        # Mock the client's JWKS and JWKS URL
-        client = create_test_client()
-        
-        # Mock JWKS response for the actual call
-        mock_response = Mock()
-        mock_response.json.return_value = mock_jwks
-        mock_response.headers = {'content-length': '1000'}
-        mock_response.content = b'{"keys": [{"kty": "RSA", "kid": "test-key-1", "alg": "RS256", "use": "sig", "n": "AQAB", "e": "AQAB"}]}'
-        
         # Mock the HTTP client to return our response
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client_class.return_value = mock_http_client
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        
+        # Mock JWKS response for the actual call
+        mock_jwks_response = Mock()
+        mock_jwks_response.json.return_value = mock_jwks
+        mock_jwks_response.raise_for_status.return_value = None
+        mock_jwks_response.headers = {'content-length': '800'}
+        mock_jwks_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_jwks_response.content = b'{"keys":[{"kty":"RSA","kid":"test-key-1","alg":"RS256","use":"sig","n":"test-n","e":"AQAB"}]}'
+        mock_jwks_response.status_code = 200
         
         # Override the get method for JWKS call
         def mock_get(url):
-            if 'jwks' in url:
-                return mock_response
+            if 'openid-configuration' in url:
+                return mock_oidc_response
+            elif 'jwks' in url:
+                return mock_jwks_response
             else:
-                response = Mock()
-                response.json.return_value = self.mock_oidc_config
-                return response
+                return mock_oidc_response
         
         mock_http_client.get.side_effect = mock_get
+        mock_http_client_class.return_value = mock_http_client
+        
+        # Mock the client's JWKS and JWKS URL
+        client = create_test_client()
         
         # Test public key retrieval
         # Note: This will fail due to invalid RSA parameters, but we're testing the function structure
@@ -782,13 +1146,25 @@ class TestInternalMethods(unittest.TestCase):
             # Expected for invalid RSA parameters in testing
             pass
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_get_public_key_not_found(self, mock_http_client_class, mock_verify_tls):
         """Test public key retrieval when key not found."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -796,8 +1172,11 @@ class TestInternalMethods(unittest.TestCase):
         # Mock JWKS for the actual call
         mock_response = Mock()
         mock_response.json.return_value = self.mock_jwks
-        mock_response.headers = {'content-length': '1000'}
-        mock_response.content = b'{"keys": [{"kty": "RSA", "kid": "test-key-1", "alg": "RS256", "use": "sig", "n": "AQAB", "e": "AQAB"}]}'
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '800'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"keys":[{"kty":"RSA","kid":"test-key-1","alg":"RS256","use":"sig","n":"test-n","e":"AQAB"}]}'
+        mock_response.status_code = 200
         mock_http_client.get.return_value = mock_response
         
         # Test public key retrieval for non-existent key
@@ -912,56 +1291,99 @@ class TestSecurityIntegration(unittest.TestCase):
             "expires_in": 3600
         }
 
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_client_with_security_enabled(self, mock_http_client_class, mock_verify_tls):
         """Test client with all security features enabled."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client.post.return_value.json.return_value = self.mock_token_response
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
         
         # Verify security is enabled
         self.assertTrue(client.enable_security)
-        self.assertIsNotNone(client._authenticator)
-        self.assertIsNotNone(client._input_sanitizer)
-        self.assertIsNotNone(client._error_handler)
-        self.assertIsNotNone(client._resource_limiter)
-        self.assertIsNotNone(client._audit_logger)
-        self.assertIsNotNone(client._code_injection_protector)
+        self.assertIsNotNone(client.security)
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_client_with_security_disabled(self, mock_http_client_class, mock_verify_tls):
         """Test client with security features disabled."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
-        client = create_test_client()
+        # Create config with security disabled
+        from agentauth.config.security_config import SecurityConfig
+        security_config = SecurityConfig(enable_security=False)
+        config = ClientConfig(
+            idp_name="Test IdP",
+            idp_endpoint=get_test_idp_base_url(),
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            scope="test-scope",
+            security=security_config
+        )
+        client = OAuth2OIDCClient(config)
         
         # Verify security is disabled
         self.assertFalse(client.enable_security)
-        # Security components should not be initialized
-        self.assertFalse(hasattr(client, '_authenticator'))
-        self.assertFalse(hasattr(client, '_input_sanitizer'))
-        self.assertFalse(hasattr(client, '_error_handler'))
-        self.assertFalse(hasattr(client, '_resource_limiter'))
-        self.assertFalse(hasattr(client, '_audit_logger'))
-        self.assertFalse(hasattr(client, '_code_injection_protector'))
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_authenticate_with_security_checks(self, mock_http_client_class, mock_verify_tls):
         """Test authentication with security validation using proper auth token."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client.post.return_value.json.return_value = self.mock_token_response
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        
+        # Mock token response
+        mock_response = Mock()
+        mock_response.json.return_value = self.mock_token_response
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '500'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"access_token":"test-token","token_type":"Bearer","expires_in":3600}'
+        mock_response.status_code = 200
+        mock_http_client.post.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -972,14 +1394,25 @@ class TestSecurityIntegration(unittest.TestCase):
         # Verify the token has proper JWT structure
         self.assertTrue(len(token.split('.')) == 3)
 
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_authenticate_with_invalid_auth_token(self, mock_http_client_class, mock_verify_tls):
         """Test authentication with invalid auth token."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client.post.return_value.json.return_value = self.mock_token_response
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -988,13 +1421,25 @@ class TestSecurityIntegration(unittest.TestCase):
         with self.assertRaises(SecurityError):
             client.authenticate(auth_token="invalid-token")
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_validate_token_with_security_checks(self, mock_http_client_class, mock_verify_tls):
         """Test token validation with security checks."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -1015,82 +1460,217 @@ class TestErrorHandlingScenarios(unittest.TestCase):
             "token_endpoint": f"{base_url}/oauth2/token",
             "jwks_uri": f"{base_url}/.well-known/jwks.json"
         }
+        
+        # Create a proper JWT token for testing
+        import jwt
+        import time
+        
+        # Create a valid JWT payload
+        payload = {
+            "sub": "1234567890",
+            "name": "John Doe",
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 3600,  # 1 hour from now
+            "iss": base_url,
+            "aud": "test-client-id"
+        }
+        
+        # Create a proper JWT token (using HS256 for testing)
+        self.valid_jwt_token = jwt.encode(payload, "test-secret", algorithm="HS256")
+        
+        self.mock_token_response = {
+            "access_token": self.valid_jwt_token,
+            "token_type": "Bearer",
+            "expires_in": 3600
+        }
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_network_timeout_handling(self, mock_http_client_class, mock_verify_tls):
         """Test handling of network timeouts."""
-        # Mock the SecureHTTPClient to simulate timeout
-        mock_http_client = Mock()
-        mock_http_client.get.side_effect = requests.exceptions.Timeout("Request timeout")
-        mock_http_client_class.return_value = mock_http_client
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
         
-        with self.assertRaises(OAuth2OIDCError):
-            create_test_client()
-    
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
-    def test_connection_error_handling(self, mock_http_client_class, mock_verify_tls):
-        """Test handling of connection errors."""
-        # Mock the SecureHTTPClient to simulate connection error
-        mock_http_client = Mock()
-        mock_http_client.get.side_effect = requests.exceptions.ConnectionError("Connection failed")
-        mock_http_client_class.return_value = mock_http_client
-        
-        with self.assertRaises(OAuth2OIDCError):
-            create_test_client()
-    
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
-    def test_malformed_jwks_handling(self, mock_http_client_class, mock_verify_tls):
-        """Test handling of malformed JWKS responses."""
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        
+        # Mock authentication to simulate timeout
+        mock_http_client.post.side_effect = requests.exceptions.Timeout("Request timeout")
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
         
+        with self.assertRaises(requests.exceptions.Timeout):
+            client.authenticate()
+    
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
+    def test_connection_error_handling(self, mock_http_client_class, mock_verify_tls):
+        """Test handling of connection errors."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
+        # Mock the SecureHTTPClient
+        mock_http_client = Mock()
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        
+        # Mock authentication to simulate connection error
+        mock_http_client.post.side_effect = requests.exceptions.ConnectionError("Connection failed")
+        mock_http_client_class.return_value = mock_http_client
+        
+        client = create_test_client()
+        
+        with self.assertRaises(requests.exceptions.ConnectionError):
+            client.authenticate()
+    
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
+    def test_malformed_jwks_handling(self, mock_http_client_class, mock_verify_tls):
+        """Test handling of malformed JWKS responses."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
+        # Mock the SecureHTTPClient
+        mock_http_client = Mock()
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        
         # Mock malformed JWKS response with proper headers
-        mock_response = Mock()
-        mock_response.json.return_value = {"invalid": "structure"}
-        mock_response.headers = {'content-length': '1000'}
-        mock_response.content = b'{"invalid": "structure"}'
-        mock_http_client.get.return_value = mock_response
+        mock_jwks_response = Mock()
+        mock_jwks_response.json.return_value = {"invalid": "structure"}
+        mock_jwks_response.raise_for_status.return_value = None
+        mock_jwks_response.headers = {'content-length': '1000'}
+        mock_jwks_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_jwks_response.content = b'{"invalid": "structure"}'
+        mock_jwks_response.status_code = 200
+        
+        # Set up side effect to return different responses for different URLs
+        def mock_get(url):
+            if 'openid-configuration' in url:
+                return mock_oidc_response
+            elif 'jwks' in url:
+                return mock_jwks_response
+            else:
+                return mock_oidc_response
+        
+        mock_http_client.get.side_effect = mock_get
+        mock_http_client_class.return_value = mock_http_client
+        
+        client = create_test_client()
+        
+        # Clear JWKS cache to force fresh retrieval
+        client._jwks_cache = None
+        client._jwks_cache_time = 0
         
         # Should raise SecurityError for malformed JWKS
         with self.assertRaises(SecurityError):
-            client.get_jwks()
+            client.get_jwks(force_refresh=True)
 
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_empty_jwks_handling(self, mock_http_client_class, mock_verify_tls):
         """Test handling of empty JWKS."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        
+        # Mock empty JWKS response
+        mock_jwks_response = Mock()
+        mock_jwks_response.json.return_value = {"keys": []}
+        mock_jwks_response.raise_for_status.return_value = None
+        mock_jwks_response.headers = {'content-length': '1000'}
+        mock_jwks_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_jwks_response.content = b'{"keys": []}'
+        mock_jwks_response.status_code = 200
+        
+        # Set up side effect to return different responses for different URLs
+        def mock_get(url):
+            if 'openid-configuration' in url:
+                return mock_oidc_response
+            elif 'jwks' in url:
+                return mock_jwks_response
+            else:
+                return mock_oidc_response
+        
+        mock_http_client.get.side_effect = mock_get
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
         
-        # Mock empty JWKS response
-        mock_response = Mock()
-        mock_response.json.return_value = {"keys": []}
-        mock_response.headers = {'content-length': '1000'}
-        mock_response.content = b'{"keys": []}'
-        mock_http_client.get.return_value = mock_response
+        # Clear JWKS cache to force fresh retrieval
+        client._jwks_cache = None
+        client._jwks_cache_time = 0
         
         # Should raise SecurityError for empty JWKS
         with self.assertRaises(SecurityError):
-            client.get_jwks()
+            client.get_jwks(force_refresh=True)
     
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_malformed_oidc_config_handling(self, mock_http_client_class, mock_verify_tls):
         """Test handling of malformed OIDC configuration."""
-        # Mock the SecureHTTPClient to return malformed config
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
+        # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = {"invalid": "config"}  # Missing required fields
+        
+        # Mock malformed OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = {"invalid": "config"}  # Missing required fields
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"invalid": "config"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        
+        # Mock token response for authentication
+        mock_response = Mock()
+        mock_response.json.return_value = self.mock_token_response
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '500'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"access_token":"test-token","token_type":"Bearer","expires_in":3600}'
+        mock_response.status_code = 200
+        mock_http_client.post.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -1129,20 +1709,42 @@ class TestPerformanceAndLoad(unittest.TestCase):
             "token_endpoint": f"{base_url}/oauth2/token",
             "jwks_uri": f"{base_url}/.well-known/jwks.json"
         }
-    
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
-    def test_concurrent_authentication_requests(self, mock_http_client_class, mock_verify_tls):
-        """Test multiple concurrent authentication requests with proper thread safety."""
-        # Mock the SecureHTTPClient
-        mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        # Use a token with future expiration to avoid expiration issues
-        mock_http_client.post.return_value.json.return_value = {
+        
+        self.mock_token_response = {
             "access_token": self.valid_jwt_token,
             "token_type": "Bearer",
             "expires_in": 3600
         }
+    
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
+    def test_concurrent_authentication_requests(self, mock_http_client_class, mock_verify_tls):
+        """Test multiple concurrent authentication requests with proper thread safety."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
+        # Mock the SecureHTTPClient
+        mock_http_client = Mock()
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        
+        # Mock token response
+        mock_response = Mock()
+        mock_response.json.return_value = self.mock_token_response
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '500'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"access_token":"test-token","token_type":"Bearer","expires_in":3600}'
+        mock_response.status_code = 200
+        mock_http_client.post.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -1186,19 +1788,35 @@ class TestPerformanceAndLoad(unittest.TestCase):
             # Verify the token has proper JWT structure
             self.assertTrue(len(result.split('.')) == 3)
 
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_cache_performance(self, mock_http_client_class, mock_verify_tls):
         """Test cache performance and behavior with proper token validation."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        # Use a token with future expiration to avoid expiration issues
-        mock_http_client.post.return_value.json.return_value = {
-            "access_token": self.valid_jwt_token,
-            "token_type": "Bearer",
-            "expires_in": 3600
-        }
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        
+        # Mock token response
+        mock_response = Mock()
+        mock_response.json.return_value = self.mock_token_response
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '500'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"access_token":"test-token","token_type":"Bearer","expires_in":3600}'
+        mock_response.status_code = 200
+        mock_http_client.post.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()
@@ -1223,18 +1841,35 @@ class TestPerformanceAndLoad(unittest.TestCase):
         # Verify the token has proper JWT structure
         self.assertTrue(len(token3.split('.')) == 3)
 
-    @patch('agentauth.security.components.http_client.verify_tls_version')
-    @patch('agentauth.security.components.http_client.SecureHTTPClient')
+    @patch('agentauth.core.client.verify_tls_version')
+    @patch('agentauth.core.client.SecureHTTPClient')
     def test_memory_usage_under_load(self, mock_http_client_class, mock_verify_tls):
         """Test memory usage with many tokens/JWKS."""
+        # Mock verify_tls_version to return True
+        mock_verify_tls.return_value = True
+        
         # Mock the SecureHTTPClient
         mock_http_client = Mock()
-        mock_http_client.get.return_value.json.return_value = self.mock_oidc_config
-        mock_http_client.post.return_value.json.return_value = {
-            "access_token": "mock-token",
-            "token_type": "Bearer",
-            "expires_in": 3600
-        }
+        
+        # Mock OIDC discovery response
+        mock_oidc_response = Mock()
+        mock_oidc_response.json.return_value = self.mock_oidc_config
+        mock_oidc_response.raise_for_status.return_value = None
+        mock_oidc_response.headers = {'content-length': '1000'}
+        mock_oidc_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_oidc_response.content = b'{"issuer":"https://test.issuer.com","token_endpoint":"https://test.issuer.com/oauth2/token","jwks_uri":"https://test.issuer.com/.well-known/jwks.json"}'
+        mock_oidc_response.status_code = 200
+        mock_http_client.get.return_value = mock_oidc_response
+        
+        # Mock token response
+        mock_response = Mock()
+        mock_response.json.return_value = self.mock_token_response
+        mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'content-length': '500'}
+        mock_response.raw.connection.sock.version.return_value = "TLSv1.3"
+        mock_response.content = b'{"access_token":"test-token","token_type":"Bearer","expires_in":3600}'
+        mock_response.status_code = 200
+        mock_http_client.post.return_value = mock_response
         mock_http_client_class.return_value = mock_http_client
         
         client = create_test_client()

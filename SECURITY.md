@@ -1,6 +1,6 @@
 # AgentAuth Security Guide
 
-> **📝 Documentation Note**: This document uses `https://test.issuer.com` as a dummy URL for examples only. For actual testing, you must set the `AGENTAUTH_TEST_IDP_BASE_URL` environment variable to your real Identity Provider endpoint. See the [README.md](README.md) for required environment variable configuration.
+> **📝 Documentation Note**: This document uses `https://test.issuer.com` as a dummy URL for examples only. All tests use mock data and do not require any external IdP endpoints or network access.
 
 ## Overview
 
@@ -127,7 +127,7 @@ dev_security_config = (SecurityBuilder()
   
   # Create client with security enabled
   # Note: https://test.issuer.com is used as a dummy URL for documentation purposes only.
-  # In actual tests, use the AGENTAUTH_TEST_IDP_BASE_URL environment variable.
+  # All tests use mock data and do not require external IdP endpoints.
   security_config = SecurityBuilder().with_security_enabled(True).build()
   client_config = ClientBuilder().with_idp("Test IdP", "https://test.issuer.com").with_credentials("client-id", "client-secret").with_security(security_config).build()
   client = OAuth2OIDCClient(client_config)
@@ -869,14 +869,12 @@ export AGENTAUTH_GENERATE_ERROR_IDS=true         # Generate unique error IDs (de
 export AGENTAUTH_REPORT_SECURITY_VIOLATIONS=true # Report security violations (default: true)
 ```
 
-#### Testing Variables
-```bash
-# Required for all tests - IdP independent
-export AGENTAUTH_TEST_IDP_BASE_URL="https://your-idp.example.com"
+#### Testing
 
-# Required for real OAuth2 authentication tests - IdP independent
-export AGENTAUTH_TEST_IDP_CLIENT_ID="your-oauth2-client-id"
-export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-oauth2-client-secret"
+```bash
+# All tests use mock data and do not require any environment variables
+# Tests are completely self-contained and isolated
+# No external IdP endpoints or network access required
 ```
 
 #### Important Notes
@@ -887,8 +885,7 @@ export AGENTAUTH_TEST_IDP_CLIENT_SECRET="your-oauth2-client-secret"
 
 # Production vs Testing
 # Use AGENTAUTH_* variables for production
-# Use AGENTAUTH_TEST_* variables for testing (all three are IdP independent)
-# Tests will emit clear error messages if required test variables are not set
+# Tests use mock data and do not require any environment variables
 ```
 
 ### Configuration File
@@ -1049,22 +1046,15 @@ def test_security_hardening():
 
 ### 4. Transport Security Testing
 
-**Note:** These examples use the `AGENTAUTH_TEST_IDP_BASE_URL` environment variable. Set it to your test IdP endpoint:
-
-```bash
-export AGENTAUTH_TEST_IDP_BASE_URL='https://your-idp.example.com'
-```
+**Note:** These examples use mock data and do not require external IdP endpoints.
 
 ```python
 # Test transport security features
 def test_transport_security():
-    import os
     from agentauth import SecureHTTPClient, verify_tls_version
     
-    # Get test endpoint from environment
-    base_url = os.getenv("AGENTAUTH_TEST_IDP_BASE_URL")
-    if not base_url:
-        raise ValueError("AGENTAUTH_TEST_IDP_BASE_URL environment variable is required")
+    # Use mock endpoint for testing
+    base_url = "https://test.issuer.com"
     
     # Test TLS 1.3 preference using OIDC discovery endpoint
     http_client = SecureHTTPClient(timeout=10, verify_ssl=True)
