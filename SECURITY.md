@@ -6,6 +6,12 @@
 
 This document outlines the security enhancements implemented in the AgentAuth library to protect sensitive data and prevent common attack vectors.
 
+### URL Conventions
+
+Throughout this documentation, we use the following URL conventions:
+- **`https://your-idp.example.com`** - Placeholder for your actual IdP URL (production use)
+- **`https://test.issuer.com`** - Test/mock URL used in examples and tests only
+
 ## Security Features
 
 AgentAuth implements comprehensive security measures to protect sensitive data:
@@ -674,7 +680,7 @@ security = SecurityFramework(security_config)
 # 3. Create client configuration
 client_config = ClientConfig(
     idp_name="Secure IdP",
-    idp_endpoint="https://secure-idp.example.com",
+    idp_endpoint="https://your-idp.example.com",
     client_id="secure-client-id",
     client_secret="secure-client-secret",
     security=security_config
@@ -853,7 +859,9 @@ export AGENTAUTH_RATE_LIMIT_PER_MINUTE=3000     # Max requests per minute (defau
 export AGENTAUTH_MAX_RESPONSE_SIZE=1048576      # Max response size in bytes (default: 1MB)
 export AGENTAUTH_MAX_PROCESSING_TIME=30         # Max processing time in seconds (default: 30)
 export AGENTAUTH_MAX_CONCURRENT_REQUESTS=10     # Max concurrent requests (default: 10)
-```
+export AGENTAUTH_CERT_CHAIN=/path/to/certificate-chain.pem  # Certificate chain file
+export AGENTAUTH_JWKS_CACHE_TTL=3600            # JWKS cache TTL in seconds (default: 3600)
+export AGENTAUTH_TIMEOUT=30                     # HTTP request timeout in seconds (default: 30)
 
 #### Audit and Logging Variables
 ```bash
@@ -867,7 +875,8 @@ export AGENTAUTH_LOG_ERROR_DETAILS=true          # Log detailed error informatio
 export AGENTAUTH_ERROR_LOG_FILE=/var/log/agentauth-errors.log  # Error log file path
 export AGENTAUTH_GENERATE_ERROR_IDS=true         # Generate unique error IDs (default: true)
 export AGENTAUTH_REPORT_SECURITY_VIOLATIONS=true # Report security violations (default: true)
-```
+export AGENTAUTH_NONCE_TTL=300                    # Nonce TTL in seconds (default: 300)
+export AGENTAUTH_MAX_AUTH_TOKEN_AGE=300           # Max auth token age in seconds (default: 300)
 
 #### Testing
 
@@ -897,8 +906,10 @@ SECURITY_CONFIG = {
     "cert_chain_path": "/path/to/certificate-chain.pem",
     "rate_limit_per_minute": 3000,
     # "token_ttl" removed - token TTL is managed per token via 'exp' claim
-    "nonce_ttl": 300,
-    "max_auth_token_age": 300
+    # Note: nonce_ttl and max_auth_token_age are internal configuration options
+    # Use AGENTAUTH_NONCE_TTL and AGENTAUTH_MAX_AUTH_TOKEN_AGE environment variables instead
+    "nonce_ttl": 300,  # Internal config - use AGENTAUTH_NONCE_TTL env var
+    "max_auth_token_age": 300  # Internal config - use AGENTAUTH_MAX_AUTH_TOKEN_AGE env var
 }
 ```
 
@@ -1139,7 +1150,7 @@ from agentauth import OAuth2OIDCClient
 
 client = OAuth2OIDCClient(
     idp_name="Secure IdP",
-    idp_endpoint="https://secure-idp.example.com",
+    idp_endpoint="https://your-idp.example.com",
     client_id="secure-client-id",
     client_secret="secure-client-secret"
 )

@@ -168,7 +168,7 @@ def example_secure_client_usage():
                       .build())
     
     client_config = (ClientBuilder()
-                    .with_idp("Secure IdP", "https://secure-idp.example.com")
+                    .with_idp("Secure IdP", "https://your-idp.example.com")
                     .with_credentials("secure-client-id", "secure-client-secret")
                     .with_timeout(30)
                     .with_cert_chain("/path/to/certificate-chain.pem")  # Optional

@@ -741,12 +741,5 @@ When adding new tests:
 
 ## 📄 License
 
-The comprehensive test suite is part of the AgentAuth library and is licensed under the Apache 2.0 License.
+The test suite is part of the AgentAuth library and is licensed under the Apache 2.0 License.
 
----
-
-**Last Updated**: December 2024  
-**Test Suite Version**: 0.0.1  
-**Total Test Methods**: 151  
-**Coverage**: 100% Function Coverage  
-**Status**: ✅ Production Ready 
