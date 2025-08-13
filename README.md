@@ -958,11 +958,10 @@ For comprehensive test documentation, see [`tests/TEST_AGENTAUTH.md`](tests/TEST
 
 The comprehensive test suite provides:
 
-- ✅ **Complete Function Coverage** - All functions and classes thoroughly tested
-- ✅ **High Success Rate** - Comprehensive test coverage with reliable results
-- ✅ **Complete Mocking** - All HTTP requests properly mocked to avoid network dependencies
-- ✅ **Security Testing** - All security components thoroughly tested
-- ✅ **Error Scenarios** - Comprehensive error handling and edge case testing
+- ✅ **Function Coverage** - All functions and classes thoroughly tested
+- ✅ **Complete Mocking** - All HTTP requests mocked to avoid network dependencies
+- ✅ **Security Testing** - All security components tested
+- ✅ **Error Scenarios** - Comprehensive error handling
 - ✅ **Integration Testing** - End-to-end authentication flows
 - ✅ **Performance Testing** - Timeout, caching, and resource limiting tests
 
@@ -979,7 +978,7 @@ python -m unittest tests.test_agentauth_security -v
 python -m unittest tests.test_config -v
 ```
 
-> **Note:** The test suite uses comprehensive mocking to avoid real network requests. All HTTP calls are mocked to ensure reliable, deterministic test execution.
+> **Note:** The test suite uses comprehensive mocking to avoid real network requests during test runs. HTTP calls are mocked to ensure reliable, deterministic test execution.
 
 ## ⚠️ Error Handling
 
@@ -1083,7 +1082,7 @@ except SecurityError as e:
 5. **Token Expiration**: Handle token expiration gracefully
 6. **HTTPS**: Always use HTTPS for all communications
 
-## ⚡ Performance
+## ⚡ Performance Considerations
 
 1. **Caching**: The library automatically caches tokens and JWKS
 2. **Connection Pooling**: Uses requests session for connection reuse
@@ -1103,23 +1102,22 @@ except SecurityError as e:
 - **Rate Limiting**: 3000 requests/minute default
 - **Resource Protection**: Automatic DoS protection
 
-### Metrics
-
-```python
-# Get performance statistics
-stats = client.security.get_resource_usage_stats()
-print(f"Active requests: {stats['active_requests']}")
-print(f"Cache hit rate: {stats.get('cache_hit_rate', 'N/A')}")
-print(f"Average response time: {stats.get('avg_response_time', 'N/A')}ms")
-```
-
-## 📝 Logging
+## 📝 Logging and Monitoring
 
 The library provides comprehensive logging. Configure logging level as needed:
 
 ```python
 import logging
 logging.basicConfig(level=logging.INFO)
+```
+
+Statistics can be collected using simple Python statements:
+
+```python
+stats = client.security.get_resource_usage_stats()
+print(f"Active requests: {stats['active_requests']}")
+print(f"Cache hit rate: {stats.get('cache_hit_rate', 'N/A')}")
+print(f"Average response time: {stats.get('avg_response_time', 'N/A')}ms")
 ```
 
 ## 🤝 Contributing
