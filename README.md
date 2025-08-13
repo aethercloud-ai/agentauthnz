@@ -1083,51 +1083,27 @@ except SecurityError as e:
 5. **Token Expiration**: Handle token expiration gracefully
 6. **HTTPS**: Always use HTTPS for all communications
 
-## ⚡ Performance Optimization
+## ⚡ Performance
 
 1. **Caching**: The library automatically caches tokens and JWKS
 2. **Connection Pooling**: Uses requests session for connection reuse
-3. **Timeout Configuration**: Configure appropriate timeouts
-4. **JWKS TTL**: Adjust JWKS cache TTL based on your needs
+3. **Configurable Timeouta**: Configure appropriate timeouts (see associated variables)
 
-## 📊 Performance Characteristics
+### Caching
 
-### Memory Usage
-
-- **Base Memory**: ~2-5MB for client initialization
-- **Token Cache**: ~1KB per cached token
-- **JWKS Cache**: ~10-50KB depending on key size and count
-- **Security Components**: ~1-2MB for security framework
-
-### CPU Usage
-
-- **Token Validation**: <1ms per token (with cached JWKS)
-- **Authentication**: 10-100ms depending on network latency
-- **JWKS Retrieval**: 50-500ms depending on IdP response time
-- **Security Validation**: <1ms per operation
-
-### Network Bandwidth
-
-- **OIDC Discovery**: ~2-5KB per request
-- **JWKS Retrieval**: ~5-20KB per request
-- **Token Exchange**: ~1-2KB per request
-- **Token Validation**: No network calls (uses cached JWKS)
-
-### Caching Performance
-
-- **Token Cache Hit Rate**: 95%+ for typical usage patterns
-- **JWKS Cache Hit Rate**: 99%+ (refreshed only when expired)
+- **Token Cache Hit Rate**: (depends on configuration and use case)
+- **JWKS Cache Hit Rate**: (refreshed only when expired)
 - **Cache Eviction**: Automatic TTL-based cleanup
 - **Memory Efficiency**: LRU-style eviction for optimal memory usage
 
-### Concurrent Request Handling
+### Concurrency
 
 - **Default Limit**: 10 concurrent requests
 - **Configurable**: Up to 100+ concurrent requests
 - **Rate Limiting**: 3000 requests/minute default
 - **Resource Protection**: Automatic DoS protection
 
-### Performance Monitoring
+### Metrics
 
 ```python
 # Get performance statistics
