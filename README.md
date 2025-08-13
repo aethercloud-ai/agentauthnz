@@ -1,8 +1,8 @@
 # AgentAuth
 
-A comprehensive Python library for OAuth2 and OpenID Connect (OIDC) authentication with JWT token validation. This library supports machine-to-machine (M2M) authentication and works with any Identity Provider (IdP) that implements OAuth2/OIDC standards.
+A high security Python library for OAuth2 and OpenID Connect (OIDC) authentication with JWT token validation designed to support machine-to-machine (M2M) authentication and to work with any Identity Provider (IdP) that implements OAuth2/OIDC standards.
 
-AgentAuth provides **significantly superior security** compared to the standard Authlib library. While Authlib offers broader OAuth/OIDC functionality, AgentAuth delivers enterprise-grade security features that far exceed Authlib's basic security implementation.
+AgentAuth provides significantly stronger security compared to the standard Authlib library. While Authlib offers broader OAuth/OIDC functionality, AgentAuth delivers enterprise-grade security features that far exceed Authlib's basic security implementation.
 
 ## ✨ Features
 
@@ -22,8 +22,8 @@ AgentAuth provides **significantly superior security** compared to the standard 
 
 | Library | Security Score | Strengths | Weaknesses |
 |---------|----------------|-----------|------------|
-| **AgentAuth** | **9.5/10** | Enterprise-grade security, comprehensive protection | Narrow scope (OAuth2/OIDC client only) |
-| **Authlib** | **4.5/10** | Standard OAuth/OIDC implementation | Limited security features, no advanced protection |
+| **AgentAuth** | Enterprise-grade security, comprehensive protection | Narrow scope (OAuth2/OIDC client only) |
+| **Authlib** | Standard OAuth/OIDC implementation | Limited security features, no advanced protection |
 
 ### 🎯 Security Comparison
 
