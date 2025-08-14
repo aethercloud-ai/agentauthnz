@@ -38,7 +38,16 @@ AgentAuth provides significantly stronger security compared to the standard Auth
 | **Token Security** | ⚠️ Simple storage with TTL | ⚠️ Standard token storage |
 | **Cryptographic Security** | ✅ HMAC auth, certificate validation | ⚠️ Standard JWT validation |
 
-## 🌐 Supported IdPs
+## 🌐 Standards Based IdPs
+
+| Example Identity Providers |
+|----------------------------|
+| [AWS](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html) |
+| [Azure](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow) |
+| [Auth0](https://auth0.com/docs/customize/actions/explore-triggers/machine-to-machine-trigger) |
+| [Authentik](https://goauthentik.io/blog/2023-09-26-machine-to-machine-communication-in-authentik/) |
+| [GCP](https://developers.google.com/identity/protocols/oauth2/service-account) |
+| [Okta](https://developer.okta.com/docs/guides/client-credentials/main/) |
 
 Pending comprehensiove testing, the library should works with any IdP that implements OAuth2/OIDC standards, such as:
 
