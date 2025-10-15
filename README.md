@@ -1,4 +1,4 @@
-# AgentAuth
+# AI Agent AuthN/AuthZ
 
 A high security Python library for OAuth2 and OpenID Connect (OIDC) authentication with JWT token validation designed to support machine-to-machine (M2M) authentication and to work with any Identity Provider (IdP) that implements OAuth2/OIDC standards.
 
